@@ -1,6 +1,12 @@
+import "./global.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import { Navbar } from "../components/Navbar";
+import { CornerWidget } from "@/components/CornerWidget";
+import { AnimationWrapper } from '../components/AnimationWrapper';
+import { Overlay } from '../components/Overlay';
+import { SignIn } from "@/components/SignIn";
+import { SignUp } from "@/components/SignUp";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +33,20 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex">
+        {/* <AnimationWrapper> */}
+        <Navbar />
+        <Overlay />
+        <SignIn />
+        <SignUp />
+        <main className="flex-1 overflow-y-auto h-[calc(100vh-80px)] md:h-screen p-4 md:p-8 relative">
+          <div className="max-w-5xl mx-auto space-y-8 pb-25 relative h-full">
+            <CornerWidget />
+            {children}
+          </div>
+        </main>
+        {/* </ AnimationWrapper > */}
+      </body>
     </html>
   );
 }

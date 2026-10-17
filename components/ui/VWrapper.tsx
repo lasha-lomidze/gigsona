@@ -43,31 +43,29 @@ export const VWrapper = <T extends ElementType = 'button'>({
     const getDynamicClasses = () => {
         if (variant === 'dark') {
             if (isSelected) {
-                return "bg-[linear-gradient(135deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.02)_100%)] border-[rgba(255,255,255,0.30)] text-[rgba(255,255,255,0.90)] shadow-[inset_0_1px_2px_rgba(255,255,255,0.15),0_8px_30px_rgba(0,0,0,0.7)]";
+                return "bg-[linear-gradient(135deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.02)_100%)] border-line/60 text-ink shadow-[inset_0_1px_2px_rgba(255,255,255,0.15),0_8px_30px_rgba(0,0,0,0.7)]";
             }
             if (isHovered && enableDefaultAnimations) {
-                return "bg-[linear-gradient(135deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.02)_100%)] border-[rgba(255,255,255,0.2)] text-[rgba(255,255,255,0.85)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_25px_rgba(0,0,0,0.6)]";
+                return "bg-[linear-gradient(135deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.02)_100%)] border-line text-ink shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_25px_rgba(0,0,0,0.6)]";
             }
             const idleBg = isHovered
                 ? "bg-[linear-gradient(135deg,rgba(255,255,255,0.04)_0%,rgba(255,255,255,0.005)_100%)]"
                 : "bg-[linear-gradient(135deg,rgba(255,255,255,0.04)_0%,rgba(255,255,255,0.015)_50%,rgba(255,255,255,0.005)_100%)]";
-            return `${idleBg} border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.45)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_15px_rgba(0,0,0,0.5)]`;
+            return `${idleBg} border-line/50 text-muted shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_15px_rgba(0,0,0,0.5)]`;
         }
 
         // Default 'regular' variant mapping
         if (isSelected) {
-            return "bg-[linear-gradient(135deg,rgba(255,255,255,0.20)_0%,rgba(255,255,255,0.10)_50%,rgba(255,255,255,0.05)_100%)] border-[rgba(255,255,255,0.50)] text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),0_8px_30px_rgba(0,0,0,0.6)]";
+            return "bg-surface-2 border-line text-ink shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),0_8px_30px_rgba(0,0,0,0.15)]";
         }
         if (isHovered && enableDefaultAnimations) {
-            return "bg-[linear-gradient(135deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.05)_100%)] border-[rgba(255,255,255,0.3)] text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_8px_25px_rgba(0,0,0,0.5)]";
+            return "bg-surface border-line text-ink shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_8px_25px_rgba(0,0,0,0.1)]";
         }
-        const idleBg = isHovered
-            ? "bg-[linear-gradient(135deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.01)_100%)]"
-            : "bg-[linear-gradient(135deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.03)_50%,rgba(255,255,255,0.01)_100%)]";
-        return `${idleBg} border-[rgba(255,255,255,0.15)] text-[rgba(255,255,255,0.65)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_4px_15px_rgba(0,0,0,0.4)]`;
+        const idleBg = isHovered ? "bg-surface/90" : "bg-surface/75";
+        return `${idleBg} border-line text-muted hover:text-ink shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_4px_15px_rgba(0,0,0,0.05)]`;
     };
 
-    const transitionClass = shouldTransition ? "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]" : "transition-none";
+    const transitionClass = shouldTransition ? "transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-out" : "transition-none";
     const scaleClass = (isPressed && shouldScale) ? "scale-[0.96]" : "scale-100";
 
     // Auto-strip logic so your className inputs don't build duplicate classes

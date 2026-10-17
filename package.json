@@ -1,23 +1,31 @@
 {
-  "name": "nameless",
+  "name": "gigsona",
   "version": "0.1.0",
+  "description": "A classroom workspace for tracking student progress and participation.",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:push": "drizzle-kit push",
+    "db:migrate-members": "tsx scripts/migrate-group-members.ts",
+    "seed": "tsx scripts/seed.ts",
+    "clear": "tsx scripts/clear.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "better-auth": "^1.6.9",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
-    "gsap": "^3.15.0",
+    "html-to-image": "^1.11.13",
+    "motion": "^14.3.0",
     "next": "16.2.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-icons": "^5.6.0",
+    "recharts": "^3.10.1",
+    "xlsx": "^0.18.5",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
@@ -29,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.5",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

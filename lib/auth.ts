@@ -19,7 +19,16 @@ export const auth = betterAuth({
                 defaultValue: "guest",
             },
         },
-    }
+    },
+    // Serves getSession from a signed cookie so page loads and server actions
+    // skip two session/user queries each. Sign-out in other browsers takes effect
+    // within this window.
+    session: {
+        cookieCache: {
+            enabled: true,
+            maxAge: 60 * 5,
+        },
+    },
 });
 
 

@@ -1,0 +1,31 @@
+export const en = {
+    "labels.category.activity": "Activity",
+    "labels.category.classwork": "Classwork",
+    "labels.category.camera": "Camera",
+    "labels.category.attendance": "Attendance",
+    "labels.category.qa": "Q&A",
+    "labels.category.workout": "Workout",
+    "labels.role.anonymous": "Anonymous",
+    "labels.role.student": "Student",
+    "labels.role.mentor": "Mentor",
+    "labels.role.assistant": "Assistant",
+    "labels.status.active": "Active",
+    "labels.status.inactive": "Inactive",
+    "labels.status.unassigned": "Unassigned",
+};
+
+export const ka: Record<keyof typeof en, string> = {
+    "labels.category.activity": "აქტივობა",
+    "labels.category.classwork": "საკლასო მუშაობა",
+    "labels.category.camera": "კამერა",
+    "labels.category.attendance": "დასწრება",
+    "labels.category.qa": "კითხვა-პასუხი",
+    "labels.category.workout": "ვარჯიში",
+    "labels.role.anonymous": "ანონიმური",
+    "labels.role.student": "სტუდენტი",
+    "labels.role.mentor": "მენტორი",
+    "labels.role.assistant": "ასისტენტი",
+    "labels.status.active": "აქტიური",
+    "labels.status.inactive": "არააქტიური",
+    "labels.status.unassigned": "მიუნიჭებელი",
+};

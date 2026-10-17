@@ -1,13 +1,14 @@
 "use client"
 import { useStore } from '../store/store'
 import { authClient } from '@/lib/auth-client'
-import { Loading } from './Loading'
+import { useT } from "@/lib/i18n/use-t";
+import { SignOutButton } from './SignOutButton'
 import { VWrapper } from './ui/VWrapper'
 
 export const CornerWidget = () => {
+    const t = useT()
 
-    const { data, isPending, error } = authClient.useSession()
-    console.log('Session Data:', { data, isPending, error });
+    const { data, isPending } = authClient.useSession()
     const isSignedIn = data != null;
 
     const { setModal } = useStore()
@@ -17,7 +18,7 @@ export const CornerWidget = () => {
     if (!isSignedIn) return (
         <div className="absolute top-0 right-0 flex items-center gap-3 fade">
 
-            <VWrapper enableDefaultAnimations={true} as='button' onClick={() => setModal('sign-up')}>Sign Up</VWrapper>
+            <VWrapper enableDefaultAnimations={true} as='button' onClick={() => setModal('sign-up')}>{t("shell.auth.signUpCaps")}</VWrapper>
 
             <button
                 data-power="none" data-delay={0.7} data-direction="left"
@@ -49,15 +50,15 @@ export const CornerWidget = () => {
                 onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
                 onClick={() => setModal('sign-in')}
             >
-                Sign In
+                {t("shell.auth.signInCaps")}
             </button>
         </div>
     )
 
     return (
-        <div className="absolute fade opacity-0 top-0 right-0 m-4 p-2 bg-lime-500 text-lime-900 rounded shadow-2xl">
-            Welcome, {data.user.email}!
+        <div className="absolute right-0 top-0 z-20 flex items-center gap-3 rounded-md border border-line bg-canvas/90 px-3 py-2 text-xs text-muted">
+            <span className="max-w-44 truncate">{data.user.email}</span>
+            <SignOutButton />
         </div>
     )
 }
-

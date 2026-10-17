@@ -1,50 +1,46 @@
-"use client"
-import { useStore } from '../store/store'
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+"use client";
+import { motionDuration, motionEase } from "@/components/ui/motion";
+import { useStore } from "../store/store";
+import { useEffect, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "motion/react";
+
+const subscribe = () => () => {};
+const getSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export const Overlay = () => {
-    const { modalOpen, setModal } = useStore()
-
-    const [shouldRender, setShouldRender] = useState(false);
-    const [isAnimating, setIsAnimating] = useState(false); // New state to trigger CSS
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const { modalOpen, setModal } = useStore();
+    const mounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
     useEffect(() => {
         if (modalOpen) {
-            setShouldRender(true);
-            document.body.style.overflow = 'hidden';
-
-            // Wait 10ms to let the DOM mount before starting the "in" animation
-            const timer = setTimeout(() => setIsAnimating(true), 10);
-            return () => clearTimeout(timer);
+            document.body.style.overflow = "hidden";
         } else {
-            setIsAnimating(false); // Start "out" animation
-            document.body.style.overflow = '';
-
-            // Wait for animation to finish before unmounting
-            const timer = setTimeout(() => setShouldRender(false), 300);
-            return () => clearTimeout(timer);
+            document.body.style.overflow = "";
         }
+        return () => {
+            document.body.style.overflow = "";
+        };
     }, [modalOpen]);
 
-    if (!mounted || !shouldRender) return null;
+    if (!mounted) return null;
 
     return createPortal(
-        <div
-            onClick={() => setModal(null)}
-            className={`
-                fixed inset-0 z-100 transition-all duration-300 ease-in-out
-                ${isAnimating
-                    ? "opacity-100 backdrop-blur-md pointer-events-auto"
-                    : "opacity-0 backdrop-blur-none pointer-events-none"}
-            `}
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
-        />,
+        <AnimatePresence>
+            {modalOpen && (
+                <motion.div
+                    key="modal-overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: motionDuration.standard, ease: motionEase }}
+                    onClick={() => setModal(null)}
+                    className="fixed inset-0 z-100 backdrop-blur-md"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
+                />
+            )}
+        </AnimatePresence>,
         document.body
     );
 };

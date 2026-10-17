@@ -30,8 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# local environment files (commit examples only)
 .env*
+!.env.example
+!.env.*.example
 
 # vercel
 .vercel
@@ -39,3 +41,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local planning and legacy diagrams
+/docs/sketch.txt
+/docs/temp.txt
+/docs/schema.drawio

@@ -1,98 +1,102 @@
 "use client"
-import { Input } from './ui/Input'
+import { useState, type FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
+import { FiX } from 'react-icons/fi'
+import { AnimatePresence, motion } from 'motion/react'
+import { motionDuration, motionEase } from './ui/motion'
 import { useStore } from '../store/store'
-import { useEffect, useState } from 'react'
 import { authClient } from "@/lib/auth-client";
-import { BottomUpNeonButton } from './ui/BottomUpNeonButton';
+import { useT } from '@/lib/i18n/use-t';
 
 export const SignIn = () => {
+    const { modalOpen, setModal } = useStore()
+    const router = useRouter()
+    const t = useT()
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [message, setMessage] = useState('')
+    const [pending, setPending] = useState(false)
 
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
-    const { modalOpen } = useStore()
-
-    const { data, isPending, error } = authClient.useSession()
-    console.log('Session Data:', { data, isPending, error });
-
-    if (!mounted) return null;
-
-    const handleSignIn = async () => {
-        const { data, error } = await authClient.signIn.email({
-            email: 'lashalomidze380@gmail.com',
-            password: '1234567890',
-            rememberMe: true,
-            callbackURL: `${window.location.origin}/`,
-        })
-
-        console.log('Sign In Response:', { data, error });
+    const translateSignInError = (rawMessage?: string) => {
+        switch (rawMessage) {
+            case 'Invalid email':
+                return t('auth.error.invalidEmail')
+            case 'Invalid email or password':
+                return t('auth.error.invalidEmailOrPassword')
+            case 'Email and password is not enabled':
+                return t('auth.error.emailPasswordDisabled')
+            case 'Email not verified':
+                return t('auth.error.emailNotVerified')
+            default:
+                return t('auth.error.signInFallback')
+        }
     }
 
+    const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        setMessage('')
+        setPending(true)
+        try {
+            const { error } = await authClient.signIn.email({
+                email: email.trim(),
+                password,
+                rememberMe: true,
+                callbackURL: window.location.pathname,
+            })
+
+            if (error) {
+                setMessage(translateSignInError(error.message))
+                return
+            }
+
+            setPassword('')
+            setModal(null)
+            router.refresh()
+        } catch {
+            setMessage(t('auth.error.serviceUnavailable'))
+        } finally {
+            setPending(false)
+        }
+    }
 
     return (
-        modalOpen === "sign-in" && (
-            <form action={handleSignIn}
-                className='sign-in-container fixed z-110 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-10 flex flex-col items-center gap-10'
-            >
-                <h1 className="text-white text-2xl font-light tracking-[0.2em] uppercase opacity-80">
-                    Sign In
-                </h1>
-
-                <div className="w-full flex flex-col gap-8">
-                    <Input label='Email' type='email' />
-                    <Input label='Password' type='password' />
-                </div>
-
-                <BottomUpNeonButton text='Enter Academy' />
-
-            </form>
-        ))
+        <AnimatePresence>
+            {modalOpen === "sign-in" && (
+                <motion.form
+                    key="sign-in-modal"
+                    onSubmit={handleSignIn}
+                    initial={{ opacity: 0, scale: 0.98, y: "-48%", x: "-50%" }}
+                    animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
+                    exit={{ opacity: 0, scale: 0.98, y: "-48%", x: "-50%" }}
+                    transition={{ duration: motionDuration.standard, ease: motionEase }}
+                    className='modal-card fixed z-110 left-1/2 top-1/2 flex w-[calc(100%-2rem)] max-w-md flex-col gap-7 p-6 sm:p-10'
+                >
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="eyebrow">{t('auth.signIn.welcomeBack')}</p>
+                            <h1 className="mt-2 text-2xl font-semibold text-ink">{t('auth.signIn.title')}</h1>
+                        </div>
+                        <button type="button" onClick={() => setModal(null)} aria-label={t('auth.signIn.closeAriaLabel')} title={t('auth.common.close')} className="rounded-md p-2 text-faint transition hover:bg-white/5 hover:text-ink">
+                            <FiX aria-hidden="true" />
+                        </button>
+                    </div>
+                    <label className="block text-xs font-medium text-muted">
+                        {t('auth.common.email')}
+                        <input type="email" name="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="field mt-1.5" />
+                    </label>
+                    <label className="block text-xs font-medium text-muted">
+                        {t('auth.common.password')}
+                        <input type="password" name="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} className="field mt-1.5" />
+                    </label>
+                    {message && <p role="alert" className="text-sm text-danger">{message}</p>}
+                    <button type="submit" disabled={pending} className="btn btn-primary h-11">
+                        {pending ? t('auth.signIn.pending') : t('auth.signIn.submit')}
+                    </button>
+                    <p className="text-center text-sm text-faint">
+                        {t('auth.signIn.newHere')} <button type="button" onClick={() => setModal('sign-up')} className="font-medium text-accent hover:text-lime-200">{t('auth.signIn.createAccount')}</button>
+                    </p>
+                </motion.form>
+            )}
+        </AnimatePresence>
+    )
 }
-
-
-
-
-// 1) 
-//             <button
-//                 className="
-//     group relative w-full py-4 rounded-xl overflow-hidden
-//     border border-lime-400/30 bg-lime-400/5
-//     transition-all duration-500 ease-out text-sm
-//     hover:border-lime-400 hover:shadow-[0_0_20px_rgba(163,230,53,0.3)]
-// "
-//             >
-//                 {/* The Text - High Contrast */}
-//                 <span className="relative z-10 text-lime-500  uppercase tracking-[0.2em] transition-colors duration-500 font-light group-hover:text-black">
-//                     Enter Academy
-//                 </span>
-
-//                 {/* The Fill - Using transform instead of scale-x for smoother rendering */}
-//                 <div className="absolute inset-0 bg-lime-500 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]" />
-//             </button>
-
-
-
-// 2)
-/* <button
-              style={{
-              width: "100%",3
-              padding: "14px 20px",
-              background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              color: "rgba(255,255,255,0.8)",
-              borderRadius: "12px",
-              fontWeight: 400,
-              fontSize: "14px",
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-              transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-              backdropFilter: "blur(12px)",
-              boxShadow: `
-                  inset 0 1px 1px rgba(255,255,255,0.1), 
-                  0 4px 15px rgba(0,0,0,0.4)
-              `,
-          }}
-          className="hover:scale-[1.02] hover:border-lime-700/50 hover:text-white transition-all"
-      >
-          Enter Academy
-      </button> */

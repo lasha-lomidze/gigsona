@@ -4,7 +4,7 @@
   "description": "A classroom workspace for tracking student progress and participation.",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

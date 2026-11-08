@@ -1248,10 +1248,10 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                                             onClick={(event) => {
                                                 if (event.altKey) {
                                                     event.preventDefault();
-                                                    toggleLockedCategory(categoryIndex);
+                                                    toggleCategorySelection(categoryIndex);
                                                     return;
                                                 }
-                                                toggleCategorySelection(categoryIndex);
+                                                toggleLockedCategory(categoryIndex);
                                             }}
                                             className={`inline-flex items-center justify-center gap-1 rounded px-1 py-1 text-center transition-colors ${isFullySelected ? 'bg-accent/10 text-lime-200' : 'hover:bg-accent/5 hover:text-lime-200'} ${isLocked ? 'ring-1 ring-accent/50 text-lime-200' : ''}`}
                                         >

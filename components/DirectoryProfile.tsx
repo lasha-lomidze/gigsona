@@ -38,6 +38,7 @@ export function DirectoryProfile({
     studentGroup,
     studentRanks,
     auraStats,
+    returnTo,
 }: {
     name: string;
     avatarId: string | null;
@@ -48,13 +49,15 @@ export function DirectoryProfile({
     studentGroup: { id: number; name: string } | null;
     studentRanks: StudentLeaderboardRanks | null;
     auraStats: ProfileAuraStats | null;
+    returnTo?: string;
 }) {
     const t = useT();
     const avatar = getAvatarById(avatarId);
+    const backHref = returnTo || "/search";
 
     return (
         <div className="pb-10">
-            <Link href="/search" className="mb-4 inline-flex items-center gap-2 rounded-md text-sm text-muted transition hover:text-lime-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
+            <Link href={backHref} className="mb-4 inline-flex items-center gap-2 rounded-md text-sm text-muted transition hover:text-lime-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
                 <FiArrowLeft aria-hidden="true" />
                 {t("search.profile.back")}
             </Link>

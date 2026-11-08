@@ -111,7 +111,7 @@ export function ManageGridRows({
                                         value,
                                     })}
                                     title={t("manage.grid.cell.title")}
-                                    onClick={(event) => onSelectCell(flatIndex, event.altKey)}
+                                    onClick={(event) => onSelectCell(flatIndex, !event.altKey)}
                                     onDoubleClick={() => onEditCell(flatIndex)}
                                     className={`flex h-10 cursor-pointer select-none flex-col items-center justify-center rounded-md border transition-all duration-150 ${action === "undo"
                                         ? "scale-[0.98] border-cyan-300/70 bg-cyan-300/10 shadow-[0_0_18px_rgba(103,232,249,0.22)]"

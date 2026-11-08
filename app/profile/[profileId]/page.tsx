@@ -12,11 +12,16 @@ import { getStudentLeaderboardRanks } from "@/lib/student-leaderboard";
 
 type DirectoryProfilePageProps = {
     params: Promise<{ profileId: string }>;
+    searchParams?: Promise<{ returnTo?: string }>;
 };
 
-export default async function DirectoryProfilePage({ params }: DirectoryProfilePageProps) {
+export default async function DirectoryProfilePage({ params, searchParams }: DirectoryProfilePageProps) {
     const [locale, t] = await Promise.all([getRegionLocale(), getT()]);
     const { profileId: profileKey } = await params;
+    const resolvedSearchParams = searchParams ? await searchParams : undefined;
+    const returnTo = typeof resolvedSearchParams?.returnTo === "string" && resolvedSearchParams.returnTo.startsWith("/search")
+        ? resolvedSearchParams.returnTo
+        : undefined;
     if (profileKey.startsWith("user-")) {
         const userId = profileKey.slice("user-".length);
         if (!userId) return notFoundView(t);
@@ -43,6 +48,7 @@ export default async function DirectoryProfilePage({ params }: DirectoryProfileP
                     studentGroup={null}
                     studentRanks={null}
                     auraStats={null}
+                    returnTo={returnTo}
                 />
             </>
         );
@@ -108,6 +114,7 @@ export default async function DirectoryProfilePage({ params }: DirectoryProfileP
                 studentGroup={studentGroup}
                 studentRanks={studentRanks}
                 auraStats={auraStats}
+                returnTo={returnTo}
             />
         </>
     );

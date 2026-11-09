@@ -1,12 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { FiEye, FiEyeOff, FiLock, FiX } from 'react-icons/fi';
+import { FiArrowDown, FiArrowUp, FiCalendar, FiCheck, FiEye, FiEyeOff, FiLock, FiTrendingUp, FiType, FiX } from 'react-icons/fi';
 import { loadDailyAuraSheet, rememberManageGroup, redoDailyAuraOperation, saveDailyAuraOperations, undoDailyAuraOperations, type DailyAuraValue } from '@/actions/manage-aura';
 
 import type { AuraCategory } from '@/types/types';
 import { useManage, type SelectionState } from '@/hooks/useManage';
 import { useT } from '@/lib/i18n/use-t';
+import { useRegion } from '@/components/RegionSetting';
 import { categoryLabelKey } from '@/lib/aura-stats-shared';
 import { categories } from './manage/constants';
 import { ManageGridRows } from './manage/ManageGridRows';
@@ -14,13 +15,18 @@ import type { ManageGroup as Group, ManageStudent as Student } from './manage/ty
 import { ManageExportControls } from './manage/ManageExportControls';
 import {
     COLUMN_DEFAULTS_STORAGE_KEY,
+    DEFAULT_MANAGE_SORT,
     getHideAbsentPreferenceSnapshot,
     getShowZeroPreferenceSnapshot,
+    getSortPreferenceSnapshot,
     loadColumnDefaults,
     saveHideAbsentPreference,
     saveShowZeroPreference,
+    saveSortPreference,
     subscribeToHideAbsentPreference,
     subscribeToShowZeroPreference,
+    subscribeToSortPreference,
+    type ManageSortOption,
 } from './manage/preferences';
 import { ScoringRulebook } from './manage/ScoringRulebook';
 type AuraHistoryEntry = {
@@ -64,6 +70,7 @@ const buildAuraMap = (groupStudents: Student[], values: DailyAuraValue[]) => {
 
 export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPreferenceKey, hideAbsentPreferenceKey, initialGroupId, initialSheet }: ManageProps) => {
     const t = useT();
+    const { locale } = useRegion();
     const categoryLabels = useMemo(() => ({
         attendance: t(categoryLabelKey('attendance')),
         camera: t(categoryLabelKey('camera')),
@@ -115,6 +122,18 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
         [showZeroStorageKey],
     );
     const showZeroScores = useSyncExternalStore(subscribeToShowZeroPreferenceCallback, readShowZeroPreference, () => false);
+
+    const sortStorageKey = hideAbsentPreferenceKey ?? 'gigsona_manage_sort_anonymous';
+    const subscribeToSortPreferenceCallback = useCallback(
+        (onChange: () => void) => subscribeToSortPreference(sortStorageKey, onChange),
+        [sortStorageKey],
+    );
+    const readSortPreference = useCallback(
+        () => getSortPreferenceSnapshot(sortStorageKey),
+        [sortStorageKey],
+    );
+    const sortPreference = useSyncExternalStore(subscribeToSortPreferenceCallback, readSortPreference, () => DEFAULT_MANAGE_SORT);
+
     const [columnDefaults, setColumnDefaults] = useState<Record<AuraCategory, number>>(loadColumnDefaults);
     const [lockedCategoryIndexes, setLockedCategoryIndexes] = useState<number[]>([]);
     const columnDefaultsRef = useRef(columnDefaults);
@@ -169,9 +188,54 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
         && saveState !== 'error'
         && (auraMap[studentIndex * categories.length + attendanceCategoryIndex] ?? 0) === 0,
         [auraMap, attendanceCategoryIndex, hideAbsent, saveState]);
-    const visibleStudentIndexes = useMemo(() => chosenGroupStudents.flatMap((_, studentIndex) =>
+
+    const sortedStudentIndexes = useMemo(() => {
+        const indexes = chosenGroupStudents.map((_, index) => index);
+        const { option, direction } = sortPreference;
+        const dirMultiplier = direction === 'asc' ? 1 : -1;
+
+        indexes.sort((a, b) => {
+            const studentA = chosenGroupStudents[a];
+            const studentB = chosenGroupStudents[b];
+            if (!studentA || !studentB) return 0;
+
+            if (option === 'alphabet') {
+                const nameA = (studentA.displayName || unnamedStudentLabel).trim();
+                const nameB = (studentB.displayName || unnamedStudentLabel).trim();
+                const comp = nameA.localeCompare(nameB, locale, { sensitivity: 'base', numeric: true });
+                if (comp !== 0) return comp * dirMultiplier;
+                return (studentA.id - studentB.id) * dirMultiplier;
+            }
+
+            if (option === 'joinDate') {
+                const dateA = studentA.createdAt ? new Date(studentA.createdAt).getTime() : 0;
+                const dateB = studentB.createdAt ? new Date(studentB.createdAt).getTime() : 0;
+                if (dateA !== dateB) return (dateA - dateB) * dirMultiplier;
+                return (studentA.id - studentB.id) * dirMultiplier;
+            }
+
+            if (option === 'todaysAura') {
+                let totalA = 0;
+                let totalB = 0;
+                for (let c = 0; c < categories.length; c += 1) {
+                    totalA += auraMap[a * categories.length + c] ?? 0;
+                    totalB += auraMap[b * categories.length + c] ?? 0;
+                }
+                if (totalA !== totalB) return (totalA - totalB) * dirMultiplier;
+                const nameA = (studentA.displayName || unnamedStudentLabel).trim();
+                const nameB = (studentB.displayName || unnamedStudentLabel).trim();
+                return nameA.localeCompare(nameB, locale, { sensitivity: 'base', numeric: true });
+            }
+
+            return 0;
+        });
+
+        return indexes;
+    }, [chosenGroupStudents, sortPreference, auraMap, unnamedStudentLabel, locale]);
+
+    const visibleStudentIndexes = useMemo(() => sortedStudentIndexes.flatMap((studentIndex) =>
         isStudentHidden(studentIndex) ? [] : [studentIndex],
-    ), [chosenGroupStudents, isStudentHidden]);
+    ), [sortedStudentIndexes, isStudentHidden]);
     const selectedCellCount = selectionMap.filter((state, flatIndex) =>
         state === 'selected' && !isStudentHidden(Math.floor(flatIndex / categories.length)),
     ).length;
@@ -358,7 +422,8 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                         }
                     }
                     setSelectionWithHistory(nextSelection);
-                    const firstCellIndex = matchingRows[0] * categories.length + categoryIndexes[0];
+                    const firstMatchingRow = visibleStudentIndexes.find((index) => matchingRows.includes(index)) ?? matchingRows[0];
+                    const firstCellIndex = firstMatchingRow * categories.length + categoryIndexes[0];
                     cursorRef.current = firstCellIndex;
                     matrixCellsRef.current[firstCellIndex]?.focus();
                     setNameSearchStatus(matchingRows.length === 1
@@ -1085,6 +1150,19 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
         saveShowZeroPreference(showZeroStorageKey, !showZeroScores);
     };
 
+    const handleSortOptionChange = (option: ManageSortOption) => {
+        if (sortPreference.option === option) return; // no-op if same option
+        const defaultDirection = option === 'todaysAura' ? 'desc' : 'asc';
+        saveSortPreference(sortStorageKey, { option, direction: defaultDirection });
+    };
+
+    const toggleSortDirection = () => {
+        saveSortPreference(sortStorageKey, {
+            ...sortPreference,
+            direction: sortPreference.direction === 'asc' ? 'desc' : 'asc',
+        });
+    };
+
     const selectGroup = (groupId: number) => {
         if (groupId === activeGroupId || saveInFlightRef.current) return;
         if (groupPreferenceKey) {
@@ -1322,6 +1400,59 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                                     />
                                 </div>
                             ))}
+                        </div>
+                    </section>
+                    <section aria-label={t('manage.sort.label')} className="panel space-y-3 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs font-semibold text-ink">
+                                {t('manage.sort.label')}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={toggleSortDirection}
+                                title={sortPreference.direction === 'asc' ? t('manage.sort.directionAsc') : t('manage.sort.directionDesc')}
+                                aria-label={t('manage.sort.toggleDirection', {
+                                    direction: sortPreference.direction === 'asc' ? t('manage.sort.directionAsc') : t('manage.sort.directionDesc'),
+                                })}
+                                aria-pressed={sortPreference.direction === 'desc'}
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-canvas px-2.5 text-[11px] font-medium text-muted transition hover:border-accent/50 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                            >
+                                {sortPreference.direction === 'asc' ? (
+                                    <FiArrowUp aria-hidden="true" className="size-3.5" />
+                                ) : (
+                                    <FiArrowDown aria-hidden="true" className="size-3.5" />
+                                )}
+                                <span>
+                                    {sortPreference.direction === 'asc' ? t('manage.sort.directionAsc') : t('manage.sort.directionDesc')}
+                                </span>
+                            </button>
+                        </div>
+                        <div className="space-y-1.5" role="group" aria-label={t('manage.sort.label')}>
+                            {(['alphabet', 'joinDate', 'todaysAura'] as const).map((opt) => {
+                                const isActive = sortPreference.option === opt;
+                                const SortIcon = opt === 'alphabet'
+                                    ? FiType
+                                    : opt === 'joinDate'
+                                        ? FiCalendar
+                                        : FiTrendingUp;
+                                return (
+                                    <button
+                                        key={opt}
+                                        type="button"
+                                        onClick={() => handleSortOptionChange(opt)}
+                                        aria-pressed={isActive}
+                                        className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                                            isActive
+                                                ? 'border-accent/50 bg-accent/10 text-lime-200'
+                                                : 'border-transparent text-muted hover:border-line hover:bg-canvas/70 hover:text-ink'
+                                        }`}
+                                    >
+                                        <SortIcon aria-hidden="true" className={`size-4 shrink-0 ${isActive ? 'text-accent' : 'text-faint'}`} />
+                                        <span className="min-w-0 flex-1">{t(`manage.sort.${opt}` as `manage.sort.${typeof opt}`)}</span>
+                                        {isActive && <FiCheck aria-hidden="true" className="size-4 shrink-0 text-accent" />}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </section>
                     <section aria-label={t('manage.sidebar.displayTitle')} className="panel flex flex-wrap items-center justify-end gap-2 p-2">

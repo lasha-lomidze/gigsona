@@ -48,13 +48,13 @@ export function ManageGridRows({
     onCellRef,
 }: ManageGridProps) {
     const t = useT();
-    const visibleStudents = new Set(visibleStudentIndexes);
     const allCategoryIndexes = categories.map((_, index) => index);
 
     return (
         <div className="mt-2 space-y-1">
-            {students.map((student, studentIndex) => {
-                if (!visibleStudents.has(studentIndex)) return null;
+            {visibleStudentIndexes.map((studentIndex) => {
+                const student = students[studentIndex];
+                if (!student) return null;
 
                 const selectedCategories = lockedCategoryIndexes.length > 0
                     ? lockedCategoryIndexes

@@ -2,6 +2,94 @@ import type { AuraCategory } from '@/types/types';
 import { categories } from './constants';
 
 export const COLUMN_DEFAULTS_STORAGE_KEY = 'gigsona:columnDefaults';
+
+export type ManageSortOption = 'alphabet' | 'joinDate' | 'todaysAura';
+export type ManageSortDirection = 'asc' | 'desc';
+
+export interface ManageSortPreference {
+    option: ManageSortOption;
+    direction: ManageSortDirection;
+}
+
+export const DEFAULT_MANAGE_SORT: ManageSortPreference = {
+    option: 'alphabet',
+    direction: 'asc',
+};
+
+const sortPreferenceListeners = new Map<string, Set<() => void>>();
+const sortPreferenceValues = new Map<string, ManageSortPreference>();
+
+function loadSortPreference(storageKey: string | undefined): ManageSortPreference {
+    if (typeof window === 'undefined' || !storageKey) return DEFAULT_MANAGE_SORT;
+    try {
+        const raw = localStorage.getItem(`${storageKey}:sort`);
+        if (!raw) return DEFAULT_MANAGE_SORT;
+        const parsed = JSON.parse(raw) as Partial<ManageSortPreference>;
+        const validOptions: ManageSortOption[] = ['alphabet', 'joinDate', 'todaysAura'];
+        const validDirections: ManageSortDirection[] = ['asc', 'desc'];
+        if (
+            parsed
+            && typeof parsed.option === 'string'
+            && validOptions.includes(parsed.option as ManageSortOption)
+            && typeof parsed.direction === 'string'
+            && validDirections.includes(parsed.direction as ManageSortDirection)
+        ) {
+            return {
+                option: parsed.option as ManageSortOption,
+                direction: parsed.direction as ManageSortDirection,
+            };
+        }
+        return DEFAULT_MANAGE_SORT;
+    } catch (error) {
+        console.error('Could not load the Manage sort preference.', error);
+        return DEFAULT_MANAGE_SORT;
+    }
+}
+
+export function subscribeToSortPreference(storageKey: string | undefined, onChange: () => void) {
+    if (!storageKey || typeof window === 'undefined') return () => { };
+
+    let listeners = sortPreferenceListeners.get(storageKey);
+    if (!listeners) {
+        listeners = new Set();
+        sortPreferenceListeners.set(storageKey, listeners);
+    }
+    listeners.add(onChange);
+
+    const preferenceKey = `${storageKey}:sort`;
+    const handleStorage = (event: StorageEvent) => {
+        if (event.key !== preferenceKey && event.key !== null) return;
+        sortPreferenceValues.delete(storageKey);
+        onChange();
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+        window.removeEventListener('storage', handleStorage);
+        listeners?.delete(onChange);
+        if (listeners?.size === 0) sortPreferenceListeners.delete(storageKey);
+    };
+}
+
+export function getSortPreferenceSnapshot(storageKey: string | undefined): ManageSortPreference {
+    if (!storageKey) return DEFAULT_MANAGE_SORT;
+    if (sortPreferenceValues.has(storageKey)) return sortPreferenceValues.get(storageKey) ?? DEFAULT_MANAGE_SORT;
+    const loaded = loadSortPreference(storageKey);
+    sortPreferenceValues.set(storageKey, loaded);
+    return loaded;
+}
+
+export function saveSortPreference(storageKey: string | undefined, value: ManageSortPreference) {
+    if (!storageKey) return;
+    sortPreferenceValues.set(storageKey, value);
+    try {
+        localStorage.setItem(`${storageKey}:sort`, JSON.stringify(value));
+    } catch (error) {
+        console.error('Could not save the Manage sort preference.', error);
+    }
+    sortPreferenceListeners.get(storageKey)?.forEach((onChange) => onChange());
+}
+
 const hideAbsentPreferenceListeners = new Map<string, Set<() => void>>();
 const hideAbsentPreferenceValues = new Map<string, boolean>();
 

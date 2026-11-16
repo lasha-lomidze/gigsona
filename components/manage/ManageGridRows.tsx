@@ -68,7 +68,7 @@ export function ManageGridRows({
                         key={student.id}
                         className="group grid grid-cols-[minmax(150px,1.6fr)_repeat(6,minmax(68px,1fr))] items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-white/2.5 sm:gap-3"
                     >
-                        <div className="sticky left-0 z-10 min-w-0 bg-surface pl-2">
+                        <div className="sticky left-0 z-10 min-w-0 bg-(--manage-grid-bg) pl-2 transition-colors group-hover:bg-[color-mix(in_srgb,var(--manage-grid-bg),white_2.5%)]">
                             <button
                                 type="button"
                                 aria-label={t(

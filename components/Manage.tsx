@@ -1,7 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { FiArrowDown, FiArrowUp, FiCalendar, FiCheck, FiEye, FiEyeOff, FiLock, FiTrendingUp, FiType, FiX } from 'react-icons/fi';
+import { AnimatePresence, motion } from 'motion/react';
+import { FiArrowDown, FiArrowUp, FiCalendar, FiCheck, FiEye, FiEyeOff, FiLock, FiMaximize2, FiMinimize2, FiTrendingUp, FiType, FiX } from 'react-icons/fi';
+import { motionEase } from '@/components/ui/motion';
 import { loadDailyAuraSheet, rememberManageGroup, redoDailyAuraOperation, saveDailyAuraOperations, undoDailyAuraOperations, type DailyAuraValue } from '@/actions/manage-aura';
 
 import type { AuraCategory } from '@/types/types';
@@ -133,6 +135,8 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
         [sortStorageKey],
     );
     const sortPreference = useSyncExternalStore(subscribeToSortPreferenceCallback, readSortPreference, () => DEFAULT_MANAGE_SORT);
+
+    const [isZenMode, setIsZenMode] = useState(false);
 
     const [columnDefaults, setColumnDefaults] = useState<Record<AuraCategory, number>>(loadColumnDefaults);
     const [lockedCategoryIndexes, setLockedCategoryIndexes] = useState<number[]>([]);
@@ -1039,6 +1043,30 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
         redoAuraRef.current = redoAuraOperation;
     }, [undoAuraOperation, redoAuraOperation]);
 
+    // Zen mode: Escape to exit.
+    // We use the capture phase so this fires before the bubble-phase grid keyboard
+    // handler; that handler checks body.overflow to skip modal-blocked shortcuts,
+    // but we don't set overflow here so grid shortcuts (Space, arrows, etc.) keep
+    // working while zen mode is active — the fixed overlay handles the visual cover.
+    useEffect(() => {
+        if (!isZenMode) return;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && !event.defaultPrevented) {
+                // Skip if the score-correction dialog is currently blocking input.
+                const hasDialog = document.body.style.overflow === 'hidden';
+                if (!hasDialog) {
+                    event.preventDefault();
+                    setIsZenMode(false);
+                }
+            }
+        };
+        // Capture phase: fires before grid handler's bubble-phase listener.
+        window.addEventListener('keydown', onKey, true);
+        return () => {
+            window.removeEventListener('keydown', onKey, true);
+        };
+    }, [isZenMode]);
+
     const saveCellValue = async (flatIndex: number, value: string) => {
         if (!sheetReadyRef.current) return;
         const aura = Number(value);
@@ -1272,6 +1300,17 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                         </span>
                         <span className="text-xs text-faint">{t('manage.header.groupCount', { count: allGroups.length })}</span>
                         <ScoringRulebook preferenceKey={hideAbsentPreferenceKey} />
+                        {/* Zen mode toggle button */}
+                        <button
+                            type="button"
+                            onClick={() => setIsZenMode(true)}
+                            title="Enter Zen mode (full-screen table view)"
+                            aria-label="Enter Zen mode"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-[11px] font-medium text-muted transition-all duration-200 hover:border-accent/50 hover:bg-accent/5 hover:text-lime-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                        >
+                            <FiMaximize2 aria-hidden="true" className="size-3.5" />
+                            <span className="hidden sm:inline">Zen</span>
+                        </button>
                     </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -1299,11 +1338,11 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                             </div>
                         </div>
                     </div>
-                    <div role="region" aria-label={t('manage.grid.title')} tabIndex={0} className="overflow-x-auto p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-5">
+                    <div role="region" aria-label={t('manage.grid.title')} tabIndex={0} className="overflow-x-auto p-3 [--manage-grid-bg:color-mix(in_srgb,var(--color-surface-raw)_80%,var(--color-canvas-raw))] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-5">
                         <div className="min-w-162.5">
                             {/* Table Header */}
                             <div className="grid grid-cols-[minmax(150px,1.6fr)_repeat(6,minmax(68px,1fr))] items-center gap-2 border-b border-line px-1 pb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-faint sm:gap-3">
-                                <div className="sticky left-0 z-20 bg-surface pl-2">
+                                <div className="sticky left-0 z-20 bg-(--manage-grid-bg) pl-2">
                                     <span>{t('manage.table.student')}</span>
                                 </div>
                                 {categories.map((cat, categoryIndex) => {
@@ -1496,6 +1535,242 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                 </aside>
 
             </div>
+
+            {/* ── Zen Mode Overlay ─────────────────────────────────────────── */}
+            <AnimatePresence>
+            {isZenMode && (
+                <motion.div
+                    key="zen-overlay"
+                    initial={{ opacity: 0, scale: 0.97, clipPath: 'inset(0 0 100% 100% round 16px)' }}
+                    animate={{ opacity: 1, scale: 1, clipPath: 'inset(0 0 0% 0% round 0px)' }}
+                    exit={{ opacity: 0, scale: 0.98, clipPath: 'inset(0 0 100% 100% round 16px)' }}
+                    transition={{ duration: 0.32, ease: motionEase }}
+                    className="fixed inset-0 z-50 flex flex-col bg-canvas"
+                    data-manage-page="true"
+                >
+                    {/* Zen top bar */}
+                    <motion.div
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.22, delay: 0.14, ease: motionEase }}
+                        className="flex shrink-0 items-center gap-3 border-b border-line bg-canvas/95 px-4 py-2 backdrop-blur-sm"
+                    >
+                        {/* Exit button */}
+                        <button
+                            type="button"
+                            onClick={() => setIsZenMode(false)}
+                            title="Exit Zen mode (Esc)"
+                            aria-label="Exit Zen mode"
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-[11px] font-medium text-muted transition-all duration-200 hover:border-accent/50 hover:text-lime-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                        >
+                            <FiMinimize2 aria-hidden="true" className="size-3.5" />
+                            <span className="hidden sm:inline">Exit Zen</span>
+                        </button>
+
+                        {/* Group name */}
+                        <span className="shrink-0 text-sm font-semibold text-ink">{activeGroup?.name || groupsLabel}</span>
+
+                        {/* Divider */}
+                        <span className="text-line">·</span>
+
+                        {/* Date input */}
+                        <label className="flex shrink-0 items-center gap-1.5 text-xs text-faint">
+                            <input
+                                type="date"
+                                value={lessonDate}
+                                max={initialLessonDate}
+                                required
+                                disabled={saveState === 'saving'}
+                                onChange={(event) => {
+                                    if (!event.target.value || saveInFlightRef.current) return;
+                                    setEditingCell(null);
+                                    sheetReadyRef.current = false;
+                                    saveErrorRef.current = false;
+                                    selectionHistoryRef.current = [];
+                                    namePrefixRef.current = '';
+                                    cursorRef.current = 0;
+                                    operationHistoryRef.current = [];
+                                    redoGenerationRef.current += 1;
+                                    redoHistoryRef.current = [];
+                                    clearActionHighlight();
+                                    setSaveState('loading');
+                                    setSaveMessage('');
+                                    const nextCellCount = chosenGroupStudents.length * categories.length;
+                                    const emptyAuraMap = Array(nextCellCount).fill(0) as number[];
+                                    auraMapRef.current = emptyAuraMap;
+                                    savedAuraMapRef.current = [...emptyAuraMap];
+                                    setSelectionMap(Array(nextCellCount).fill('deselected'));
+                                    setAuraMap(emptyAuraMap);
+                                    setLessonDate(event.target.value);
+                                }}
+                                className="field btn-sm w-auto"
+                            />
+                        </label>
+
+                        {/* Save status */}
+                        <span aria-live="polite" className={`shrink-0 text-xs ${saveState === 'error' ? 'text-danger' : saveState === 'saved' ? 'text-ok' : 'text-faint'}`}>
+                            {saveState === 'loading' ? t('manage.status.loadingScores') : saveState === 'saving' ? t('manage.status.saving') : saveState === 'error' ? (saveMessage || t('manage.status.notSaved')) : t('manage.status.saved')}
+                        </span>
+
+                        {/* Spacer */}
+                        <div className="flex-1" />
+
+                        {/* Selected count pill */}
+                        <div className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/25 bg-accent/5 px-2.5 py-1 text-xs text-lime-200">
+                            <span className="size-1.5 rounded-full bg-accent shadow-[0_0_6px_rgba(190,242,100,0.5)]" aria-hidden="true" />
+                            {t('manage.grid.selectedCount', { count: selectedCellCount })}
+                        </div>
+
+                        {/* Column defaults — compact inline */}
+                        <div className="hidden shrink-0 items-center gap-1.5 lg:flex">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-faint">Defaults:</span>
+                            {categories.map((cat) => (
+                                <label key={cat} className="flex items-center gap-1 text-[10px] text-faint" title={categoryLabels[cat]}>
+                                    <span className="hidden xl:inline">{categoryLabels[cat].slice(0, 3)}</span>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        aria-label={t('manage.sidebar.defaultAmountForCategory', { category: categoryLabels[cat] })}
+                                        value={columnDefaults[cat]}
+                                        onChange={(e) => {
+                                            const parsed = parseInt(e.target.value, 10);
+                                            setColumnDefaults((prev) => ({
+                                                ...prev,
+                                                [cat]: Number.isFinite(parsed) && parsed >= 0 ? parsed : 20,
+                                            }));
+                                        }}
+                                        className="w-10 rounded border border-line bg-canvas/60 px-1 py-0.5 text-center font-mono text-xs tabular-nums text-ink outline-none transition focus:border-accent/70 focus:ring-1 focus:ring-accent/10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    />
+                                </label>
+                            ))}
+                        </div>
+
+                        {/* Toggle: show zeros */}
+                        <button
+                            type="button"
+                            onClick={toggleShowZeroScores}
+                            aria-label={showZeroScores ? t('manage.grid.showZero.ariaHide') : t('manage.grid.showZero.ariaShow')}
+                            aria-pressed={showZeroScores}
+                            title={showZeroScores ? t('manage.grid.showZero.titleHide') : t('manage.grid.showZero.titleShow')}
+                            className={`btn btn-secondary btn-sm shrink-0 px-2 ${showZeroScores ? 'border-accent/60 bg-accent/10 text-lime-200' : 'text-muted hover:border-accent/60 hover:text-lime-200'}`}
+                        >
+                            +0
+                        </button>
+
+                        {/* Toggle: hide absent */}
+                        <button
+                            type="button"
+                            onClick={toggleHideAbsent}
+                            aria-label={hideAbsent ? t('manage.grid.absent.ariaShow') : t('manage.grid.absent.ariaHide')}
+                            aria-pressed={hideAbsent}
+                            title={hideAbsent ? t('manage.grid.absent.titleShow') : t('manage.grid.absent.titleHide')}
+                            className={`btn btn-secondary btn-sm shrink-0 px-2 ${hideAbsent ? 'border-accent/60 bg-accent/10 text-lime-200' : 'text-muted hover:border-accent/60 hover:text-lime-200'}`}
+                        >
+                            {hideAbsent
+                                ? <FiEyeOff aria-hidden="true" className="size-4" />
+                                : <FiEye aria-hidden="true" className="size-4" />}
+                        </button>
+
+                        {/* Sort direction toggle */}
+                        <button
+                            type="button"
+                            onClick={toggleSortDirection}
+                            title={sortPreference.direction === 'asc' ? t('manage.sort.directionAsc') : t('manage.sort.directionDesc')}
+                            aria-label={t('manage.sort.toggleDirection', {
+                                direction: sortPreference.direction === 'asc' ? t('manage.sort.directionAsc') : t('manage.sort.directionDesc'),
+                            })}
+                            aria-pressed={sortPreference.direction === 'desc'}
+                            className="inline-flex shrink-0 h-8 items-center gap-1 rounded-lg border border-line bg-canvas px-2 text-[11px] font-medium text-muted transition hover:border-accent/50 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                        >
+                            {sortPreference.direction === 'asc' ? (
+                                <FiArrowUp aria-hidden="true" className="size-3.5" />
+                            ) : (
+                                <FiArrowDown aria-hidden="true" className="size-3.5" />
+                            )}
+                        </button>
+                    </motion.div>
+
+                    {/* Zen grid — full remaining height */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.28, delay: 0.18, ease: motionEase }}
+                        className="min-h-0 flex-1 overflow-y-auto"
+                    >
+                        <section data-manage-grid="true" className="h-full min-w-0 text-ink">
+                            <div
+                                role="region"
+                                aria-label={t('manage.grid.title')}
+                                tabIndex={0}
+                                className="h-full overflow-x-auto px-4 py-3 [--manage-grid-bg:var(--color-canvas-raw)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:px-6"
+                            >
+                                <div className="min-w-162.5">
+                                    {/* Zen table header */}
+                                    <div className="grid grid-cols-[minmax(150px,1.6fr)_repeat(6,minmax(68px,1fr))] items-center gap-2 border-b border-line px-1 pb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-faint sm:gap-3">
+                                        <div className="sticky left-0 z-20 bg-canvas pl-2">
+                                            <span>{t('manage.table.student')}</span>
+                                        </div>
+                                        {categories.map((cat, categoryIndex) => {
+                                            const isLocked = lockedCategoryIndexes.includes(categoryIndex);
+                                            const isFullySelected = visibleStudentIndexes.length > 0
+                                                && visibleStudentIndexes.every((studentIndex) => selectionMap[studentIndex * categories.length + categoryIndex] === 'selected');
+                                            const categoryLabel = categoryLabels[cat];
+                                            return (
+                                                <button
+                                                    key={cat}
+                                                    type="button"
+                                                    title={isLocked
+                                                        ? t('manage.grid.columnHeader.titleLocked', { category: categoryLabel })
+                                                        : t('manage.grid.columnHeader.titleUnlocked', { category: categoryLabel })}
+                                                    aria-label={isLocked
+                                                        ? t('manage.grid.columnHeader.ariaLocked', { category: categoryLabel })
+                                                        : t('manage.grid.columnHeader.ariaUnlocked', { category: categoryLabel })}
+                                                    data-manage-selection-control="true"
+                                                    aria-pressed={isFullySelected}
+                                                    onClick={(event) => {
+                                                        if (event.altKey) {
+                                                            event.preventDefault();
+                                                            toggleCategorySelection(categoryIndex);
+                                                            return;
+                                                        }
+                                                        toggleLockedCategory(categoryIndex);
+                                                    }}
+                                                    className={`inline-flex items-center justify-center gap-1 rounded px-1 py-1 text-center transition-colors ${isFullySelected ? 'bg-accent/10 text-lime-200' : 'hover:bg-accent/5 hover:text-lime-200'} ${isLocked ? 'ring-1 ring-accent/50 text-lime-200' : ''}`}
+                                                >
+                                                    {categoryLabel}
+                                                    {isLocked && <FiLock aria-hidden="true" className="size-2.5 shrink-0" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Zen table rows — cells are slightly taller for more breathing room */}
+                                    <ManageGridRows
+                                        students={chosenGroupStudents}
+                                        categories={categories}
+                                        categoryLabels={categoryLabels}
+                                        auraMap={auraMap}
+                                        selectionMap={selectionMap}
+                                        lockedCategoryIndexes={lockedCategoryIndexes}
+                                        actionHighlight={actionHighlight}
+                                        saveState={saveState}
+                                        visibleStudentIndexes={visibleStudentIndexes}
+                                        showZeroScores={showZeroScores}
+                                        unnamedStudentLabel={unnamedStudentLabel}
+                                        studentLabel={studentLabel}
+                                        onSelectStudent={selectStudentRow}
+                                        onSelectCell={selectCell}
+                                        onEditCell={editCell}
+                                        onCellRef={(index, element) => { matrixCellsRef.current[index] = element; }}
+                                    />
+                                </div>
+                            </div>
+                        </section>
+                    </motion.div>
+                </motion.div>
+            )}
+            </AnimatePresence>
+
             {editingCell !== null && editingStudent && editingCategory && (
                 <div
                     className="fixed inset-0 z-120 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"

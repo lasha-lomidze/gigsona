@@ -5,7 +5,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { MANAGE_ROSTER_TAG } from "@/lib/manage-roster";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { auras, profiles } from "@/lib/schema";
+import { profiles } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { isValidAvatarId } from "@/lib/avatars";
 import { getT } from "@/lib/i18n/server";
@@ -112,38 +112,3 @@ export const claimSignupProfile = async (): Promise<{ ok: boolean; message: stri
 }
 
 
-// export const auras = pgTable("auras", {
-//     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-//     giverId: text("giver_id").notNull().references(() => users.id, { onDelete: "set null" }),
-//     receiverId: text("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-//     category: text("category").$type<AuraCategory>().notNull(),
-//     aura: integer("aura").notNull(),
-//     createdAt: timestamp("created_at").defaultNow().notNull(),
-// });
-
-
-export const giveAura = async ({ id: receiverId, aura }: { id: number; aura: number }) => {
-    // !! uncomment when done testing
-    // // 1. Fetch the secure session on the server
-    // const session = await auth.api.getSession({
-    //     headers: await headers()
-    // });
-
-    // // 2. Block unauthorized access
-    // if (!session || !session.user) {
-    //     throw new Error("Unauthorized: You must be logged in.");
-    // }
-
-    // // 3. Optional: Block students from giving points if using roles
-    // if (session.user.role !== "mentor" && session.user.role !== "admin") {
-    //     throw new Error("Forbidden: Only mentors can give points.");
-    // }
-
-    // 4. Safely perform the insert using the server-validated user ID
-    await db.insert(auras).values({
-        aura,
-        giverId: "YanXOqCpDZDa8wQEEtKCKHpZbrfizVvf", // Securely injected on the server via session.user.id but leave this like this now for testing
-        receiverId,
-        category: "activity"
-    });
-};

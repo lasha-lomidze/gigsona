@@ -6,4 +6,4 @@ export {
     undoDailyAuraOperations,
 } from "./manage-aura";
 export type { DailyAuraValue } from "./manage-aura";
-export { claimSignupProfile, giveAura, saveProfileNameAction } from "./profile";
+export { claimSignupProfile, saveProfileNameAction } from "./profile";

@@ -141,15 +141,6 @@ export const students = pgTable("students", {
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const auras = pgTable("auras", {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-    giverId: text("giver_id").references(() => users.id, { onDelete: "set null" }),
-    receiverId: integer("receiver_id").notNull().references(() => students.id, { onDelete: "cascade" }),
-    category: text("category").$type<AuraCategory>().notNull(),
-    aura: integer("aura").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 export const dailyAuraChanges = pgTable("daily_aura_changes", {
     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     groupId: integer("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
@@ -253,18 +244,5 @@ export const studentRelations = relations(students, ({ one, many }) => ({
     group: one(groups, {
         fields: [students.groupId],
         references: [groups.id],
-    }),
-    receivedAuras: many(auras, { relationName: "receivedAuras" }),
-}));
-
-export const auraRelations = relations(auras, ({ one }) => ({
-    receiver: one(students, {
-        fields: [auras.receiverId],
-        references: [students.id],
-        relationName: "receivedAuras",
-    }),
-    giver: one(users, {
-        fields: [auras.giverId],
-        references: [users.id],
     }),
 }));

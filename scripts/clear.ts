@@ -17,7 +17,6 @@ const main = async () => {
 
     await db.execute(sql.raw(`
         TRUNCATE TABLE
-            "auras",
             "group_members",
             "students",
             "assistants",

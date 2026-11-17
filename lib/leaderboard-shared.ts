@@ -10,6 +10,8 @@ export type LeaderboardStudent = {
     avatarUrl: string | null;
     totalAura: number;
     activeDays: number;
+    monthAura: number;
+    monthActiveDays: number;
     globalRank: number;
     groupRank: number;
 };
@@ -26,4 +28,5 @@ export type LeaderboardData = {
     topAura: number;
     totalStudents: number;
     totalGroups: number;
+    currentMonthStart: string;
 };

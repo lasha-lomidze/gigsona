@@ -13,6 +13,7 @@ import {
     FiCalendar,
     FiChevronLeft,
     FiChevronRight,
+    FiFilter,
     FiSearch,
     FiTarget,
     FiTrendingUp,
@@ -34,31 +35,62 @@ interface LeaderboardClientProps {
 const initialsFor = (name: string) =>
     name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
 
+const PAGE_SIZE = 20;
+
+type ScorePeriod = "all-time" | "month";
+
 export function LeaderboardClient({ initialData, defaultTab, currentProfile }: LeaderboardClientProps) {
     const t = useT();
     const searchInputId = useId();
 
     const [activeTab, setActiveTab] = useState<string>(defaultTab);
+    const [scorePeriod, setScorePeriod] = useState<ScorePeriod>("all-time");
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState<number>(20);
     const [highlightedProfileId, setHighlightedProfileId] = useState<number | null>(null);
 
     const isGlobal = activeTab === "global";
     const selectedGroupId = isGlobal ? null : Number(activeTab);
+    const isCurrentMonth = scorePeriod === "month";
+
+    const periodStudents = useMemo(() => {
+        if (!isCurrentMonth) return initialData.students;
+
+        const monthStudents = initialData.students
+            .map((student) => ({
+                ...student,
+                totalAura: student.monthAura,
+                activeDays: student.monthActiveDays,
+            }))
+            .sort((a, b) =>
+                b.totalAura - a.totalAura
+                || b.activeDays - a.activeDays
+                || a.studentId - b.studentId,
+            );
+        const groupRanks = new Map<number, number>();
+
+        return monthStudents.map((student, index) => {
+            let groupRank = 1;
+            if (student.groupId !== null) {
+                groupRank = (groupRanks.get(student.groupId) ?? 0) + 1;
+                groupRanks.set(student.groupId, groupRank);
+            }
+            return { ...student, globalRank: index + 1, groupRank };
+        });
+    }, [initialData.students, isCurrentMonth]);
 
     // Filter students by selected tab (Global vs specific Group)
     const scopeStudents = useMemo(() => {
         if (isGlobal) {
-            return initialData.students;
+            return periodStudents;
         }
-        return initialData.students
+        return periodStudents
             .filter((s) => s.groupId === selectedGroupId)
             .map((s, index) => ({
                 ...s,
                 groupRank: index + 1,
             }));
-    }, [initialData.students, isGlobal, selectedGroupId]);
+    }, [periodStudents, isGlobal, selectedGroupId]);
 
     // Apply search query filter
     const filteredStudents = useMemo(() => {
@@ -72,23 +104,21 @@ export function LeaderboardClient({ initialData, defaultTab, currentProfile }: L
     }, [scopeStudents, searchQuery]);
 
     // Top 3 champions for the active scope
-    const topThree = useMemo(() => {
-        return scopeStudents.slice(0, 3);
-    }, [scopeStudents]);
+    const topThree = scopeStudents.slice(0, 3);
+    const periodTopAura = periodStudents[0]?.totalAura ?? 0;
 
     const returnToUrl = isGlobal ? "/leaderboard" : `/leaderboard?tab=${activeTab}`;
 
     // Pagination calculation
     const totalCount = filteredStudents.length;
-    const isPaginated = pageSize > 0 && totalCount > pageSize;
-    const totalPages = isPaginated ? Math.ceil(totalCount / pageSize) : 1;
+    const isPaginated = totalCount > PAGE_SIZE;
+    const totalPages = isPaginated ? Math.ceil(totalCount / PAGE_SIZE) : 1;
     const safePage = Math.min(Math.max(1, currentPage), totalPages);
 
     const paginatedStudents = useMemo(() => {
-        if (!isPaginated) return filteredStudents;
-        const startIndex = (safePage - 1) * pageSize;
-        return filteredStudents.slice(startIndex, startIndex + pageSize);
-    }, [filteredStudents, isPaginated, safePage, pageSize]);
+        const startIndex = (safePage - 1) * PAGE_SIZE;
+        return filteredStudents.slice(startIndex, startIndex + PAGE_SIZE);
+    }, [filteredStudents, safePage]);
 
     // Current user's standing in current scope
     const currentUserStanding = useMemo(() => {
@@ -97,14 +127,14 @@ export function LeaderboardClient({ initialData, defaultTab, currentProfile }: L
         if (index === -1) return null;
         const student = scopeStudents[index];
         const rank = isGlobal ? student.globalRank : student.groupRank;
-        const targetPage = pageSize > 0 ? Math.ceil((index + 1) / pageSize) : 1;
+        const targetPage = Math.ceil((index + 1) / PAGE_SIZE);
         return {
             student,
             rank,
             index,
             targetPage,
         };
-    }, [currentProfile, scopeStudents, isGlobal, pageSize]);
+    }, [currentProfile, scopeStudents, isGlobal]);
 
     // Switch tab handler
     const handleTabChange = (tabId: string) => {
@@ -133,8 +163,8 @@ export function LeaderboardClient({ initialData, defaultTab, currentProfile }: L
         }, 3500);
     };
 
-    const startItem = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1;
-    const endItem = Math.min(safePage * pageSize, totalCount);
+    const startItem = totalCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+    const endItem = Math.min(safePage * PAGE_SIZE, totalCount);
 
     return (
         <div className="flex flex-col gap-8 pb-16">
@@ -142,7 +172,7 @@ export function LeaderboardClient({ initialData, defaultTab, currentProfile }: L
             <LeaderboardHero
                 totalStudents={initialData.totalStudents}
                 totalGroups={initialData.totalGroups}
-                topAura={initialData.topAura}
+                topAura={periodTopAura}
             />
 
             {/* Leaderboard Switches (Global and per Group) */}
@@ -253,6 +283,7 @@ export function LeaderboardClient({ initialData, defaultTab, currentProfile }: L
                         students={topThree}
                         currentProfileId={currentProfile?.id}
                         isGlobal={isGlobal}
+                        isCurrentMonth={isCurrentMonth}
                         returnToUrl={returnToUrl}
                     />
                 </div>
@@ -263,7 +294,7 @@ export function LeaderboardClient({ initialData, defaultTab, currentProfile }: L
                 {/* Toolbar */}
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
                     {/* Search Input */}
-                    <div className="relative flex-1 min-w-[240px] max-w-md">
+                    <div className="relative flex-1 min-w-60 max-w-md">
                         <label htmlFor={searchInputId} className="sr-only">
                             {t("leaderboard.search.placeholder")}
                         </label>
@@ -293,6 +324,48 @@ export function LeaderboardClient({ initialData, defaultTab, currentProfile }: L
 
                     {/* Actions and Jump to My Rank */}
                     <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                            <FiFilter aria-hidden="true" className="size-3.5 text-faint" />
+                            <div
+                                role="group"
+                                aria-label={t("leaderboard.period.label")}
+                                className="inline-flex items-center gap-0.5 rounded-xl border border-line bg-canvas/50 p-1"
+                            >
+                                <button
+                                    type="button"
+                                    aria-pressed={!isCurrentMonth}
+                                    onClick={() => {
+                                        setScorePeriod("all-time");
+                                        setCurrentPage(1);
+                                    }}
+                                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                                        !isCurrentMonth
+                                            ? "border border-accent/50 bg-accent/15 text-lime-200 shadow-[0_0_12px_rgba(163,230,53,0.12)]"
+                                            : "border border-transparent text-faint hover:text-ink"
+                                    }`}
+                                >
+                                    <FiTrendingUp aria-hidden="true" className="size-3.5" />
+                                    {t("leaderboard.period.allTime")}
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={isCurrentMonth}
+                                    onClick={() => {
+                                        setScorePeriod("month");
+                                        setCurrentPage(1);
+                                    }}
+                                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                                        isCurrentMonth
+                                            ? "border border-accent/50 bg-accent/15 text-lime-200 shadow-[0_0_12px_rgba(163,230,53,0.12)]"
+                                            : "border border-transparent text-faint hover:text-ink"
+                                    }`}
+                                >
+                                    <FiCalendar aria-hidden="true" className="size-3.5" />
+                                    {t("leaderboard.period.thisMonth")}
+                                </button>
+                            </div>
+                        </div>
+
                         {currentUserStanding && (
                             <button
                                 type="button"
@@ -304,20 +377,6 @@ export function LeaderboardClient({ initialData, defaultTab, currentProfile }: L
                             </button>
                         )}
 
-                        {isGlobal && totalCount > 20 && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setPageSize((prev) => (prev === 20 ? 0 : 20));
-                                    setCurrentPage(1);
-                                }}
-                                className="rounded-xl border border-line bg-canvas/50 px-3 py-2 text-xs text-muted transition hover:border-neutral-500 hover:text-ink"
-                            >
-                                {pageSize === 0
-                                    ? t("leaderboard.pagination.showPaged")
-                                    : t("leaderboard.pagination.showAll")}
-                            </button>
-                        )}
                     </div>
                 </div>
 
@@ -326,8 +385,8 @@ export function LeaderboardClient({ initialData, defaultTab, currentProfile }: L
                     <span className="text-center">{t("leaderboard.table.rank")}</span>
                     <span>{t("leaderboard.table.student")}</span>
                     <span className="hidden lg:inline">{t("leaderboard.table.cohort")}</span>
-                    <span className="hidden lg:inline text-right">{t("leaderboard.table.activeDays")}</span>
-                    <span className="text-right">{t("leaderboard.table.totalAura")}</span>
+                    <span className="hidden lg:inline text-right">{t(isCurrentMonth ? "leaderboard.table.monthActiveDays" : "leaderboard.table.activeDays")}</span>
+                    <span className="text-right">{t(isCurrentMonth ? "leaderboard.table.monthAura" : "leaderboard.table.totalAura")}</span>
                 </div>
 
                 {/* Rows List */}

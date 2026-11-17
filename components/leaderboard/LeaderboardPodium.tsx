@@ -13,13 +13,14 @@ interface LeaderboardPodiumProps {
     students: LeaderboardStudent[];
     currentProfileId?: number | null;
     isGlobal: boolean;
+    isCurrentMonth: boolean;
     returnToUrl: string;
 }
 
 const initialsFor = (name: string) =>
     name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
 
-export function LeaderboardPodium({ students, currentProfileId, isGlobal, returnToUrl }: LeaderboardPodiumProps) {
+export function LeaderboardPodium({ students, currentProfileId, isGlobal, isCurrentMonth, returnToUrl }: LeaderboardPodiumProps) {
     const t = useT();
     const prefersReducedMotion = useReducedMotion();
 
@@ -190,7 +191,7 @@ export function LeaderboardPodium({ students, currentProfileId, isGlobal, return
 
                                 <div className="mt-auto w-full border-t border-line/60 pt-2 sm:pt-3">
                                     <span className="block text-[9px] font-medium uppercase tracking-wider text-faint sm:text-[10px]">
-                                        {t("leaderboard.table.totalAura")}
+                                        {t(isCurrentMonth ? "leaderboard.table.monthAura" : "leaderboard.table.totalAura")}
                                     </span>
                                     <span className={`mt-0.5 inline-flex items-baseline gap-1 font-mono text-xl font-bold tracking-tight tabular-nums sm:text-2xl xl:text-3xl ${config.auraStyle}`}>
                                         {student.totalAura}

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AuraInsights, TotalAuraBadge } from "@/components/AuraInsights";
 import { CategoryRadar, TrendBars } from "@/components/AuraCharts";
 import type { MessageKey } from "@/lib/i18n";
@@ -52,14 +53,36 @@ export function DirectoryProfile({
     returnTo?: string;
 }) {
     const t = useT();
+    const router = useRouter();
     const avatar = getAvatarById(avatarId);
+
     const backHref = returnTo || "/search";
+    const backLabel = returnTo?.startsWith("/leaderboard")
+        ? t("leaderboard.profile.back")
+        : returnTo?.startsWith("/search")
+        ? t("search.profile.back")
+        : returnTo?.startsWith("/overview")
+        ? t("leaderboard.profile.backOverview")
+        : returnTo
+        ? t("leaderboard.profile.backGeneric")
+        : t("search.profile.back");
+
+    const handleBackClick = (e: React.MouseEvent) => {
+        if (typeof window !== "undefined" && window.history.length > 1) {
+            e.preventDefault();
+            router.back();
+        }
+    };
 
     return (
         <div className="pb-10">
-            <Link href={backHref} className="mb-4 inline-flex items-center gap-2 rounded-md text-sm text-muted transition hover:text-lime-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
+            <Link
+                href={backHref}
+                onClick={handleBackClick}
+                className="mb-4 inline-flex items-center gap-2 rounded-md text-sm text-muted transition hover:text-lime-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+            >
                 <FiArrowLeft aria-hidden="true" />
-                {t("search.profile.back")}
+                {backLabel}
             </Link>
 
             <section className="flex flex-wrap items-center gap-4 rounded-2xl border border-line bg-linear-to-br from-surface/70 via-surface/35 to-canvas p-4 sm:gap-5 sm:p-5">

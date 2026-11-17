@@ -4,6 +4,7 @@ import { en as enAuth, ka as kaAuth } from "./messages/auth";
 import { en as enErrors, ka as kaErrors } from "./messages/errors";
 import { en as enHistory, ka as kaHistory } from "./messages/history";
 import { en as enLabels, ka as kaLabels } from "./messages/labels";
+import { en as enLeaderboard, ka as kaLeaderboard } from "./messages/leaderboard";
 import { en as enManage, ka as kaManage } from "./messages/manage";
 import { en as enOverview, ka as kaOverview } from "./messages/overview";
 import { en as enProfile, ka as kaProfile } from "./messages/profile";
@@ -17,6 +18,7 @@ const en = {
     ...enErrors,
     ...enHistory,
     ...enLabels,
+    ...enLeaderboard,
     ...enManage,
     ...enOverview,
     ...enProfile,
@@ -33,6 +35,7 @@ const ka: Record<MessageKey, string> = {
     ...kaErrors,
     ...kaHistory,
     ...kaLabels,
+    ...kaLeaderboard,
     ...kaManage,
     ...kaOverview,
     ...kaProfile,

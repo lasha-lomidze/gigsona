@@ -53,6 +53,8 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
             <AnimatedTabs
                 layoutId="history-group-tabs"
                 ariaLabel={t("history.page.groupsAriaLabel")}
+                itemClassName="shrink-0"
+                scrollable
                 items={allGroups.map((item) => ({
                     id: item.id,
                     label: item.name,

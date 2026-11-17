@@ -1236,9 +1236,9 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                         </div>
                         <ScoringRulebook preferenceKey={hideAbsentPreferenceKey} />
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 flex w-full min-w-0 flex-nowrap gap-2 overflow-x-auto scrollbar-none pb-1">
                         {allGroups.map((group) => (
-                            <button key={group.id} type="button" onClick={() => selectGroup(group.id)} aria-pressed={activeGroupId === group.id} className={`chip ${activeGroupId === group.id ? 'chip-active' : ''}`}>
+                            <button key={group.id} type="button" onClick={() => selectGroup(group.id)} aria-pressed={activeGroupId === group.id} className={`chip shrink-0 ${activeGroupId === group.id ? 'chip-active' : ''}`}>
                                 {group.name}
                             </button>
                         ))}
@@ -1313,9 +1313,9 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                         </button>
                     </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-4 flex w-full min-w-0 flex-nowrap gap-2 overflow-x-auto scrollbar-none pb-1">
                     {allGroups.map((group) => (
-                        <button type="button" onClick={() => selectGroup(group.id)} aria-pressed={activeGroupId === group.id} className={`chip ${activeGroupId === group.id ? 'chip-active' : ''}`} key={group.id}>
+                        <button type="button" onClick={() => selectGroup(group.id)} aria-pressed={activeGroupId === group.id} className={`chip shrink-0 ${activeGroupId === group.id ? 'chip-active' : ''}`} key={group.id}>
                             {group.name}
                         </button>
                     ))}

@@ -48,6 +48,8 @@ For a new, disposable local database, create/update the schema and start the app
 
 ```bash
 npm run db:push
+# Set DATABASE_URL in your shell to the same development database as .env.local.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0001_student_aura_projection.sql
 npm run dev
 ```
 
@@ -80,6 +82,37 @@ Authorization is enforced on the server; hiding a control in the interface is no
 ## Deployment notes
 
 Configure `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL` in the hosting provider's environment settings. Use a separate production database, back it up before schema changes, and review Drizzle changes before applying them. Never commit `.env.local`, credentials, or production data.
+
+### Leaderboard projection migration
+
+The leaderboard and student profile ranks require `drizzle/0001_student_aura_projection.sql`.
+For an existing deployment, back up the database, test the migration on a disposable copy,
+then run the SQL with `psql` **before** deploying the updated application:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f drizzle/0001_student_aura_projection.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/check-student-aura-projection.sql
+```
+
+Both reconciliation counts must be zero. The first command is transactional and blocks
+aura-history writes during the index creation and backfill; schedule a maintenance window
+and check the duration on a representative copy first. It fails instead of overwriting a
+nonempty projection. Existing app versions can continue writing after the migration, so
+roll back application code if necessary without removing the projection.
+
+The projection is maintained by database triggers for inserts, updates, deletes, and
+truncation. Do not disable the triggers or write directly to the projection tables.
+Transactions modifying aura history must use PostgreSQL's `READ COMMITTED` isolation.
+`db:push` alone creates the projection tables but does not install or backfill the triggers;
+the SQL migration is required even on a new database. Reconcile again after maintenance or
+data imports; the check scans history and is not intended for every request.
+
+To run the SQL integration test with `psql`, use an empty disposable database whose name
+starts with `gigsona_test_`, and run from the repository root:
+
+```bash
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/student-aura-projection.sql
+```
 
 ## Project status
 

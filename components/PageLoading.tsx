@@ -3,6 +3,7 @@ import { getT } from "@/lib/i18n/server";
 
 export type PageLoadingVariant =
     | "overview"
+    | "leaderboard"
     | "history"
     | "manage"
     | "profile"
@@ -90,6 +91,52 @@ function OverviewSkeleton() {
                     </Panel>
                 ))}
             </div>
+        </div>
+    );
+}
+
+function LeaderboardSkeleton() {
+    return (
+        <div className="flex flex-col gap-8">
+            <Panel className="relative overflow-hidden p-6 sm:p-8">
+                <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr] md:items-center">
+                    <div className="flex flex-col gap-3">
+                        <Block className="h-4 w-40" />
+                        <Block className="h-10 w-72 max-w-full" />
+                        <Block className="h-4 w-96 max-w-full" />
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            <Block className="h-8 w-28 rounded-lg" />
+                            <Block className="h-8 w-28 rounded-lg" />
+                            <Block className="h-8 w-32 rounded-lg" />
+                        </div>
+                    </div>
+                    <div className="flex min-h-48 items-center justify-center rounded-2xl border border-line/40 bg-surface/30 p-6">
+                        <Block className="size-32 rounded-2xl" />
+                    </div>
+                </div>
+            </Panel>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+                {[0, 1, 2, 3, 4, 5, 6].map((item) => (
+                    <Block key={item} className="h-9 w-24 shrink-0 rounded-full" />
+                ))}
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                {[0, 1, 2].map((item) => (
+                    <Panel key={item} className="flex flex-col items-center gap-3 p-6 text-center">
+                        <Block className="size-16 rounded-full" />
+                        <Block className="h-4 w-28" />
+                        <Block className="h-3 w-16" />
+                        <Block className="h-8 w-24 rounded-lg" />
+                    </Panel>
+                ))}
+            </div>
+            <Panel className="overflow-hidden p-4 sm:p-6">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <Block className="h-10 w-64 max-w-full rounded-lg" />
+                    <Block className="h-4 w-36" />
+                </div>
+                <Rows count={8} className="h-14" />
+            </Panel>
         </div>
     );
 }
@@ -316,6 +363,7 @@ export default async function PageLoading({ variant = "generic" }: { variant?: P
     const t = await getT();
     const content = {
         overview: <OverviewSkeleton />,
+        leaderboard: <LeaderboardSkeleton />,
         history: <HistorySkeleton />,
         manage: <ManageSkeleton />,
         profile: <ProfileSkeleton />,

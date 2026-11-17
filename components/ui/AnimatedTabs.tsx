@@ -18,6 +18,7 @@ interface AnimatedTabsProps {
     className?: string;
     itemClassName?: string;
     pill?: boolean;
+    scrollable?: boolean;
 }
 
 export function AnimatedTabs({
@@ -27,12 +28,17 @@ export function AnimatedTabs({
     className,
     itemClassName,
     pill = false,
+    scrollable = false,
 }: AnimatedTabsProps) {
     return (
         <div
             role="tablist"
             aria-label={ariaLabel}
-            className={cn("flex flex-wrap items-center gap-2", className)}
+            className={cn(
+                "flex items-center gap-2",
+                scrollable ? "flex-nowrap overflow-x-auto scrollbar-none pb-1" : "flex-wrap",
+                className,
+            )}
         >
             {items.map((item) => (
                 <Link

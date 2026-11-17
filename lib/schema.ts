@@ -1,6 +1,6 @@
 
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index, integer, date, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, integer, bigint, date, primaryKey } from "drizzle-orm/pg-core";
 import { Role, ProfileStatus, AuraCategory, GroupAccessMode, GroupMemberRole } from "../types/types";
 
 export const users = pgTable("users", {
@@ -159,9 +159,26 @@ export const dailyAuraChanges = pgTable("daily_aura_changes", {
     index("daily_aura_lesson_date_idx").on(table.lessonDate),
     index("daily_aura_group_date_idx").on(table.groupId, table.lessonDate),
     index("daily_aura_score_history_idx").on(table.groupId, table.lessonDate, table.studentId, table.category, table.id),
+    index("daily_aura_student_latest_idx").on(table.studentId, table.lessonDate, table.category, table.id.desc()),
     index("daily_aura_operation_idx").on(table.operationId),
     index("daily_aura_undo_target_idx").on(table.undoesOperationId),
 ]);
+
+export const studentAuraScores = pgTable("student_aura_scores", {
+    studentId: integer("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+    lessonDate: date("lesson_date", { mode: "string" }).notNull(),
+    category: text("category").$type<AuraCategory>().notNull(),
+    changeId: integer("change_id").notNull(),
+    aura: integer("aura").notNull(),
+}, (table) => [
+    primaryKey({ columns: [table.studentId, table.lessonDate, table.category] }),
+]);
+
+export const studentAuraTotals = pgTable("student_aura_totals", {
+    studentId: integer("student_id").primaryKey().references(() => students.id, { onDelete: "cascade" }),
+    totalAura: bigint("total_aura", { mode: "bigint" }).notNull(),
+    activeDays: integer("active_days").notNull(),
+});
 
 export const userRelations = relations(users, ({ many, one }) => ({
     sessions: many(sessions),

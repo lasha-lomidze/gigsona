@@ -19,8 +19,9 @@ export default async function DirectoryProfilePage({ params, searchParams }: Dir
     const [locale, t] = await Promise.all([getRegionLocale(), getT()]);
     const { profileId: profileKey } = await params;
     const resolvedSearchParams = searchParams ? await searchParams : undefined;
-    const returnTo = typeof resolvedSearchParams?.returnTo === "string" && resolvedSearchParams.returnTo.startsWith("/search")
-        ? resolvedSearchParams.returnTo
+    const rawReturnTo = resolvedSearchParams?.returnTo;
+    const returnTo = typeof rawReturnTo === "string" && rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") && !rawReturnTo.includes(":")
+        ? rawReturnTo
         : undefined;
     if (profileKey.startsWith("user-")) {
         const userId = profileKey.slice("user-".length);

@@ -9,27 +9,11 @@ type RankRow = {
 
 export async function getStudentLeaderboardRanks(profileId: number): Promise<StudentLeaderboardRanks | null> {
     const result = await db.execute(sql`
-        WITH latest_scores AS (
-            SELECT
-                student_id,
-                new_aura,
-                ROW_NUMBER() OVER (
-                    PARTITION BY student_id, lesson_date, category
-                    ORDER BY id DESC
-                ) AS position
-            FROM daily_aura_changes
-        ),
-        lifetime_totals AS (
-            SELECT student_id, SUM(new_aura) AS total_aura
-            FROM latest_scores
-            WHERE position = 1
-            GROUP BY student_id
-        ),
-        student_leaderboard AS (
+        WITH student_leaderboard AS (
             SELECT s.profile_id, s.group_id, COALESCE(t.total_aura, 0) AS total_aura
             FROM students s
             INNER JOIN profiles p ON p.id = s.profile_id AND p.role = 'student'
-            LEFT JOIN lifetime_totals t ON t.student_id = s.id
+            LEFT JOIN student_aura_totals_ready t ON t.student_id = s.id
         ),
         target AS (
             SELECT profile_id, group_id, total_aura

@@ -19,23 +19,31 @@ export const Navbar = async () => {
     const hasActiveProfile = profile?.status === "active";
     const canStaff = hasActiveProfile && (profile.role === "mentor" || profile.role === "assistant");
     const links: NavItem[] = [
-        { href: "/", label: "shell.nav.overview", icon: "overview" },
-        { href: "/history", label: "shell.nav.history", icon: "history" },
-        { href: "/search", label: "shell.nav.search", icon: "search" },
-        { href: "/settings", label: "shell.nav.settings", icon: "settings" },
+        { href: "/", label: "shell.nav.overview", icon: "overview", description: "shell.nav.overviewDesc" },
+        { href: "/leaderboard", label: "shell.nav.leaderboard", icon: "leaderboard", description: "shell.nav.leaderboardDesc" },
     ];
 
     if (canStaff) {
-        links.splice(3, 0, { href: "/manage", label: "shell.nav.manage", icon: "manage" });
+        links.push({ href: "/manage", label: "shell.nav.manage", icon: "manage", description: "shell.nav.manageDesc" });
     }
 
-    if (session?.user) {
-        links.splice(links.length - 1, 0, { href: "/profile", label: "shell.nav.profile", icon: "profile" });
+    links.push({ href: "/history", label: "shell.nav.history", icon: "history", description: "shell.nav.historyDesc" });
+
+    if (session?.user && !canStaff) {
+        links.push({ href: "/profile", label: "shell.nav.profile", icon: "profile", description: "shell.nav.profileDesc" });
+    }
+
+    links.push({ href: "/search", label: "shell.nav.search", icon: "search", description: "shell.nav.searchDesc" });
+
+    if (session?.user && canStaff) {
+        links.push({ href: "/profile", label: "shell.nav.profile", icon: "profile", description: "shell.nav.profileDesc" });
     }
 
     if (canStaff) {
-        links.splice(links.length - 1, 0, { href: "/admin", label: "shell.nav.admin", icon: "admin" });
+        links.push({ href: "/admin", label: "shell.nav.admin", icon: "admin", description: "shell.nav.adminDesc" });
     }
+
+    links.push({ href: "/settings", label: "shell.nav.settings", icon: "settings", description: "shell.nav.settingsDesc" });
 
     return (
         <>

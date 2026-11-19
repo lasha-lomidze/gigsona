@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { FiArrowDown, FiArrowUp, FiCalendar, FiCheck, FiEye, FiEyeOff, FiLock, FiMaximize2, FiMinimize2, FiTrendingUp, FiType, FiX } from 'react-icons/fi';
+import { FiArrowDown, FiArrowUp, FiCalendar, FiCheck, FiEye, FiEyeOff, FiLock, FiMaximize2, FiMinimize2, FiShuffle, FiTrendingUp, FiType, FiX } from 'react-icons/fi';
 import { motionEase } from '@/components/ui/motion';
 import { loadDailyAuraSheet, rememberManageGroup, redoDailyAuraOperation, saveDailyAuraOperations, undoDailyAuraOperations, type DailyAuraValue } from '@/actions/manage-aura';
 
@@ -146,6 +146,22 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
     const [editingCell, setEditingCell] = useState<number | null>(null);
     const [editingAura, setEditingAura] = useState('');
     const [nameSearchStatus, setNameSearchStatus] = useState('');
+    const [isShuffling, setIsShuffling] = useState(false);
+    const [randomOnlyAttending, setRandomOnlyAttending] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return true;
+        try {
+            const stored = localStorage.getItem('gigsona_manage_random_only_attending');
+            return stored !== null ? stored === 'true' : true;
+        } catch {
+            return true;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('gigsona_manage_random_only_attending', String(randomOnlyAttending));
+        } catch { /* storage full or unavailable */ }
+    }, [randomOnlyAttending]);
     const [actionHighlight, setActionHighlight] = useState<AuraActionHighlight | null>(null);
     const saveInFlightRef = useRef(false);
     const pendingWritesRef = useRef(0);
@@ -162,6 +178,7 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
     const applyAuraRef = useRef<(indexes: number[], direction?: 1 | -1) => void>(() => undefined);
     const undoAuraRef = useRef<() => void>(() => undefined);
     const redoAuraRef = useRef<() => void>(() => undefined);
+    const selectRandomStudentRef = useRef<() => void>(() => undefined);
     const matrixCellsRef = useRef<Array<HTMLDivElement | null>>([]);
     const selectionHistoryRef = useRef<SelectionState[][]>([]);
     const namePrefixRef = useRef('');
@@ -240,6 +257,13 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
     const visibleStudentIndexes = useMemo(() => sortedStudentIndexes.flatMap((studentIndex) =>
         isStudentHidden(studentIndex) ? [] : [studentIndex],
     ), [sortedStudentIndexes, isStudentHidden]);
+
+    const attendingStudentIndexes = useMemo(() => {
+        return visibleStudentIndexes.filter((studentIndex) => {
+            const attendanceAura = auraMap[studentIndex * categories.length + attendanceCategoryIndex] ?? 0;
+            return attendanceAura > 0;
+        });
+    }, [visibleStudentIndexes, auraMap, attendanceCategoryIndex]);
     const selectedCellCount = selectionMap.filter((state, flatIndex) =>
         state === 'selected' && !isStudentHidden(Math.floor(flatIndex / categories.length)),
     ).length;
@@ -352,10 +376,11 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                 const isScoreShortcut = event.code === 'Space' || event.key === ' '
                     || event.key === 'Delete' || event.key === 'Backspace';
                 const isUndoRedoShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z';
+                const isSelectionShortcut = event.altKey && (event.code === 'KeyA' || event.code === 'KeyB' || event.code === 'KeyR' || event.key.toLowerCase() === 'r' || event.key === '®');
                 const isSelectionControl = interactiveTarget?.hasAttribute('data-manage-selection-control');
                 if (interactiveTarget
                     && !interactiveTarget.hasAttribute('data-manage-cell')
-                    && !(isSelectionControl && (isScoreShortcut || isUndoRedoShortcut || isColumnShortcut || isPlainEscapeShortcut))
+                    && !(isSelectionControl && (isScoreShortcut || isUndoRedoShortcut || isColumnShortcut || isPlainEscapeShortcut || isSelectionShortcut))
                     && !(isLetter && target.closest('[data-manage-page]'))) {
                     columnSelectionRowsRef.current = null;
                     return;
@@ -476,6 +501,11 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                     }
                 });
                 setSelectionWithHistory(nextSelection);
+                return;
+            }
+            if (event.altKey && !event.ctrlKey && !event.metaKey && (event.code === 'KeyR' || event.key.toLowerCase() === 'r' || event.key === '®')) {
+                event.preventDefault();
+                selectRandomStudentRef.current();
                 return;
             }
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
@@ -1133,6 +1163,66 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
         setSelectionWithHistory(nextSelection);
     };
 
+    const selectRandomStudent = useCallback(() => {
+        if (!sheetReadyRef.current || visibleStudentIndexes.length === 0) return;
+
+        const candidatePool = randomOnlyAttending ? attendingStudentIndexes : visibleStudentIndexes;
+        if (candidatePool.length === 0) {
+            setNameSearchStatus(t('manage.random.noAttendingFound'));
+            if (namePrefixTimeoutRef.current) clearTimeout(namePrefixTimeoutRef.current);
+            namePrefixTimeoutRef.current = setTimeout(() => {
+                setNameSearchStatus('');
+            }, 2500);
+            return;
+        }
+
+        setIsShuffling(true);
+        setTimeout(() => setIsShuffling(false), 400);
+
+        const currentSelectedRows = candidatePool.filter((studentIdx) => {
+            const rowStart = studentIdx * categories.length;
+            for (let c = 0; c < categories.length; c += 1) {
+                if (selectionMapRef.current[rowStart + c] === 'selected') return true;
+            }
+            return false;
+        });
+
+        const candidates = candidatePool.length > 1 && currentSelectedRows.length === 1
+            ? candidatePool.filter((idx) => idx !== currentSelectedRows[0])
+            : candidatePool;
+
+        const chosenStudentIndex = candidates[Math.floor(Math.random() * candidates.length)];
+        const chosenStudent = chosenGroupStudents[chosenStudentIndex];
+        if (!chosenStudent) return;
+
+        const categoryIndexes = lockedCategoryIndexes.length > 0
+            ? lockedCategoryIndexes
+            : categories.map((_, index) => index);
+
+        const nextSelection = Array(chosenGroupStudents.length * categories.length).fill('deselected') as SelectionState[];
+        for (const catIdx of categoryIndexes) {
+            nextSelection[chosenStudentIndex * categories.length + catIdx] = 'selected';
+        }
+        setSelectionWithHistory(nextSelection);
+
+        const firstCellIndex = chosenStudentIndex * categories.length + categoryIndexes[0];
+        cursorRef.current = firstCellIndex;
+        const targetCell = matrixCellsRef.current[firstCellIndex];
+        targetCell?.focus();
+        targetCell?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        const studentName = (chosenStudent.displayName || unnamedStudentLabel).trim();
+        setNameSearchStatus(t('manage.random.selectedStatus', { name: studentName }));
+        if (namePrefixTimeoutRef.current) clearTimeout(namePrefixTimeoutRef.current);
+        namePrefixTimeoutRef.current = setTimeout(() => {
+            setNameSearchStatus('');
+        }, 2000);
+    }, [attendingStudentIndexes, chosenGroupStudents, lockedCategoryIndexes, randomOnlyAttending, setSelectionWithHistory, t, unnamedStudentLabel, visibleStudentIndexes]);
+
+    useEffect(() => {
+        selectRandomStudentRef.current = selectRandomStudent;
+    }, [selectRandomStudent]);
+
     const selectCell = (flatIndex: number, additive: boolean) => {
         const studentIndex = Math.floor(flatIndex / categories.length);
         if (!sheetReadyRef.current || isStudentHidden(studentIndex)) return;
@@ -1414,6 +1504,42 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
                         </div>
                     </section>
 
+                    {/* Random student picker */}
+                    <section aria-label={t('manage.random.title')} className="panel space-y-3 p-3.5 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                            <div>
+                                <p className="eyebrow">{t('manage.random.eyebrow')}</p>
+                                <h3 className="text-sm font-semibold text-ink">{t('manage.random.title')}</h3>
+                            </div>
+                            <kbd className="rounded border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-mono text-lime-200">⌥R</kbd>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={selectRandomStudent}
+                            title={t('manage.random.titleWithShortcut')}
+                            aria-label={t('manage.random.ariaLabel')}
+                            data-manage-selection-control="true"
+                            className="flex w-full items-center justify-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-semibold text-lime-200 shadow-[0_0_15px_rgba(163,230,53,0.12)] transition-all duration-200 hover:border-accent/70 hover:bg-accent/20 hover:text-lime-100 hover:shadow-[0_0_22px_rgba(163,230,53,0.25)] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                        >
+                            <FiShuffle aria-hidden="true" className={`size-3.5 transition-transform duration-300 ${isShuffling ? 'rotate-180 scale-125' : ''}`} />
+                            <span>{t('manage.random.buttonFull')}</span>
+                        </button>
+
+                        <label className="flex items-center justify-between gap-2 cursor-pointer pt-2 border-t border-line text-[11px] text-muted hover:text-ink transition-colors">
+                            <span className="flex items-center gap-1.5">
+                                <span>{t('manage.random.onlyAttending')}</span>
+                                <span className="text-[10px] text-faint">({attendingStudentIndexes.length})</span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={randomOnlyAttending}
+                                onChange={(e) => setRandomOnlyAttending(e.target.checked)}
+                                className="size-4 rounded border-line bg-canvas text-accent focus:ring-accent/20 cursor-pointer accent-accent"
+                            />
+                        </label>
+                    </section>
+
                     {/* Column defaults */}
                     <section className="panel p-4 sm:p-5">
                         <p className="eyebrow">{t('manage.sidebar.defaults')}</p>
@@ -1614,6 +1740,26 @@ export const Manage = ({ allStudents, allGroups, initialLessonDate, groupPrefere
 
                         {/* Spacer */}
                         <div className="flex-1" />
+
+                        {nameSearchStatus && (
+                            <span aria-live="polite" className="max-w-48 truncate text-xs text-lime-200">
+                                {nameSearchStatus}
+                            </span>
+                        )}
+
+                        {/* Random student button in Zen */}
+                        <button
+                            type="button"
+                            onClick={selectRandomStudent}
+                            title={randomOnlyAttending ? `${t('manage.random.titleWithShortcut')} · ${t('manage.random.onlyAttending')}` : t('manage.random.titleWithShortcut')}
+                            aria-label={t('manage.random.ariaLabel')}
+                            data-manage-selection-control="true"
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-[11px] font-medium text-lime-200 shadow-[0_0_12px_rgba(163,230,53,0.12)] transition-all duration-200 hover:border-accent/70 hover:bg-accent/20 hover:text-lime-100 hover:shadow-[0_0_20px_rgba(163,230,53,0.25)] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                        >
+                            <FiShuffle aria-hidden="true" className={`size-3.5 transition-transform duration-300 ${isShuffling ? 'rotate-180 scale-125' : ''}`} />
+                            <span className="hidden sm:inline">{t('manage.random.button')}</span>
+                            <kbd className="hidden lg:inline-block rounded border border-accent/30 bg-accent/15 px-1 py-0.2 text-[9px] font-mono text-lime-200">⌥R</kbd>
+                        </button>
 
                         {/* Selected count pill */}
                         <div className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/25 bg-accent/5 px-2.5 py-1 text-xs text-lime-200">

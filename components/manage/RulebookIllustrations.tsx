@@ -1,5 +1,5 @@
 import { Fragment, useMemo } from 'react';
-import { FiArrowRight, FiCheck, FiEye, FiEyeOff, FiLock } from 'react-icons/fi';
+import { FiArrowRight, FiCheck, FiEye, FiEyeOff, FiLock, FiShuffle } from 'react-icons/fi';
 import { categoryLabelKey } from '@/lib/aura-stats-shared';
 import { useT } from '@/lib/i18n/use-t';
 
@@ -8,6 +8,7 @@ export const rulebookPages = [
     { id: 'select', labelKey: 'manage.rulebook.select.label', titleKey: 'manage.rulebook.select.title', summaryKey: 'manage.rulebook.select.summary' },
     { id: 'columns', labelKey: 'manage.rulebook.columns.label', titleKey: 'manage.rulebook.columns.title', summaryKey: 'manage.rulebook.columns.summary' },
     { id: 'find', labelKey: 'manage.rulebook.find.label', titleKey: 'manage.rulebook.find.title', summaryKey: 'manage.rulebook.find.summary' },
+    { id: 'random', labelKey: 'manage.rulebook.random.label', titleKey: 'manage.rulebook.random.title', summaryKey: 'manage.rulebook.random.summary' },
     { id: 'visibility', labelKey: 'manage.rulebook.visibility.label', titleKey: 'manage.rulebook.visibility.title', summaryKey: 'manage.rulebook.visibility.summary' },
     { id: 'award', labelKey: 'manage.rulebook.award.label', titleKey: 'manage.rulebook.award.title', summaryKey: 'manage.rulebook.award.summary' },
     { id: 'undo', labelKey: 'manage.rulebook.undo.label', titleKey: 'manage.rulebook.undo.title', summaryKey: 'manage.rulebook.undo.summary' },
@@ -135,6 +136,66 @@ export function RulebookIllustration({ page }: { page: RulebookPage }) {
                     </div>
                     <div className="mt-3 flex items-center gap-2 text-[10px] text-faint"><FiArrowRight aria-hidden="true" className="text-accent" /> {t('manage.rulebook.find.illustration.jumpInstruction')}</div>
                 </div>
+            </div>
+        );
+    }
+
+    if (page === 'random') {
+        return (
+            <div className="relative overflow-hidden border border-lime-300/20 bg-[radial-gradient(ellipse_at_top_right,rgba(163,230,53,0.12),transparent_50%),linear-gradient(145deg,rgba(24,24,27,0.96),rgba(9,9,11,0.98))] p-4 sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">{t('manage.rulebook.random.illustration.title')}</p>
+                        <p className="mt-1 text-xs text-faint">{t('manage.rulebook.random.illustration.lockedRespected')}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-md border border-accent/25 bg-accent/8 px-2 py-1 text-[9px] font-medium text-lime-200">
+                            {t('manage.rulebook.random.illustration.attendingOnly')}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-accent/35 bg-accent/10 px-2.5 py-1 text-[10px] font-medium text-lime-200">
+                            <FiShuffle aria-hidden="true" className="size-3" />
+                            {t('manage.random.button')}
+                        </span>
+                        <kbd className="rounded border border-accent/25 bg-accent/8 px-2 py-1 font-mono text-[10px] text-lime-100">⌥ R</kbd>
+                    </div>
+                </div>
+                <div className="overflow-hidden rounded-xl border border-white/8 bg-black/20 p-3">
+                    <div className="grid grid-cols-[minmax(72px,1.2fr)_repeat(3,minmax(44px,1fr))] items-center gap-2 pb-2 text-[9px] font-semibold uppercase tracking-wider text-faint">
+                        <span>{t('manage.table.student')}</span>
+                        <span className="text-center">{categoryLabels.attendance}</span>
+                        <span className="flex items-center justify-center gap-1 text-center text-lime-200">
+                            {categoryLabels.activity}
+                            <FiLock aria-label={t('manage.rulebook.columns.illustration.lockedCategory')} className="size-2.5 text-lime-200" />
+                        </span>
+                        <span className="flex items-center justify-center gap-1 text-center text-lime-200">
+                            {categoryLabels.classwork}
+                            <FiLock aria-label={t('manage.rulebook.columns.illustration.lockedCategory')} className="size-2.5 text-lime-200" />
+                        </span>
+                    </div>
+                    {[
+                        { name: 'Nino T.', initials: 'N', values: ['+10', '+20', '+0'], picked: false },
+                        { name: 'Giorgi B.', initials: 'G', values: ['+0', '+20', '+15'], picked: true },
+                        { name: 'Anna M.', initials: 'A', values: ['+20', '+0', '+5'], picked: false },
+                    ].map((row) => (
+                        <div key={row.name} className={`grid grid-cols-[minmax(72px,1.2fr)_repeat(3,minmax(44px,1fr))] items-center gap-2 border-t border-white/6 py-2 ${row.picked ? 'bg-accent/8 rounded-lg px-1' : ''}`}>
+                            <span className="flex min-w-0 items-center gap-1.5 truncate text-[11px] text-muted">
+                                <span className={`grid size-5 shrink-0 place-items-center rounded-full text-[9px] ${row.picked ? 'bg-accent/20 text-lime-100 font-semibold' : 'bg-white/6 text-faint'}`}>{row.initials}</span>
+                                <span className={row.picked ? 'text-lime-100 font-medium' : ''}>{row.name}</span>
+                                {row.picked && <span className="ml-1 rounded-full bg-accent/20 px-1.5 py-0.5 text-[8px] font-medium text-lime-200">{t('manage.rulebook.random.illustration.picked')}</span>}
+                            </span>
+                            <span className="rounded-md border border-white/6 bg-white/2.5 px-1.5 py-2 text-center font-mono text-[11px] text-faint">{row.values[0]}</span>
+                            <span className={`relative rounded-md border px-1.5 py-2 text-center font-mono text-[11px] ${row.picked ? 'border-lime-300/50 bg-lime-300/15 text-lime-100 shadow-[0_0_18px_rgba(163,230,53,0.1)]' : 'border-white/6 bg-white/2.5 text-faint'}`}>
+                                {row.values[1]}
+                                {row.picked && <FiCheck aria-hidden="true" className="absolute -right-1 -top-1 size-3 rounded-full bg-accent p-0.5 text-black" />}
+                            </span>
+                            <span className={`relative rounded-md border px-1.5 py-2 text-center font-mono text-[11px] ${row.picked ? 'border-lime-300/50 bg-lime-300/15 text-lime-100 shadow-[0_0_18px_rgba(163,230,53,0.1)]' : 'border-white/6 bg-white/2.5 text-faint'}`}>
+                                {row.values[2]}
+                                {row.picked && <FiCheck aria-hidden="true" className="absolute -right-1 -top-1 size-3 rounded-full bg-accent p-0.5 text-black" />}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+                <p className="mt-3 text-[10px] leading-4 text-faint">{t('manage.rulebook.random.illustration.description')}</p>
             </div>
         );
     }
@@ -317,7 +378,7 @@ export function RulebookIllustration({ page }: { page: RulebookPage }) {
             <div className="border border-line bg-surface/40 p-3">
                 <p className="text-[10px] uppercase tracking-wider text-faint">{t('manage.rulebook.shortcuts.selectAllOrInvert')}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                    {[t('manage.rulebook.shortcuts.optionA'), t('manage.rulebook.shortcuts.optionB'), t('manage.rulebook.shortcuts.escape')].map((item) => <kbd key={item} className="rounded border border-line bg-canvas px-2 py-1.5 text-[10px] text-muted">{item}</kbd>)}
+                    {[t('manage.rulebook.shortcuts.optionA'), t('manage.rulebook.shortcuts.optionB'), t('manage.rulebook.shortcuts.optionR'), t('manage.rulebook.shortcuts.escape')].map((item) => <kbd key={item} className="rounded border border-line bg-canvas px-2 py-1.5 text-[10px] text-muted">{item}</kbd>)}
                 </div>
             </div>
             <div className="border border-line bg-surface/40 p-3">
